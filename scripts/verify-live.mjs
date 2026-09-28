@@ -61,21 +61,13 @@ p.on('pageerror', (e) => consoleErrors.push('pageerror: ' + e.message));
 await p.goto(`${base}/favorite-students/`, { waitUntil: 'networkidle', timeout: 60000 });
 await p.waitForTimeout(800);
 
-// 2.1 滚动看完整列表（懒加载），滚动后轮询等待图片解码稳定
-await p.evaluate(async () => {
-  for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight) {
-    window.scrollTo(0, y);
-    await new Promise((r) => setTimeout(r, 120));
-  }
-  window.scrollTo(0, 0);
-});
-
-// 轮询直到全部解码或超时（CDN 拉取 200 张图需要一点时间，避免误判）
+// 2.1 等待图片解码稳定
+// 屏幕上的图片现在只有选择板的 15 张校徽（名单区已移除，懒加载也就不存在了），
+// 因此这里应当很快收敛；离屏导出节点的副本不计入。
 let imgs = { total: 0, loaded: 0 };
-for (let i = 0; i < 30; i++) {
-  await p.waitForTimeout(1000);
+for (let i = 0; i < 20; i++) {
+  await p.waitForTimeout(600);
   imgs = await p.evaluate(() => {
-    // 只统计屏幕上的图片：离屏导出节点里还有一整套副本，会把计数翻倍
     const list = [...document.querySelectorAll('img')].filter(
       (i) => !i.closest('[data-export-stage]')
     );
@@ -87,54 +79,90 @@ for (let i = 0; i < 30; i++) {
   if (imgs.loaded === imgs.total) break;
 }
 imgs.loaded === imgs.total
-  ? ok(`图片 ${imgs.loaded}/${imgs.total} 全部解码`)
-  : bad(`图片仅 ${imgs.loaded}/${imgs.total} 解码`);
+  ? ok(`屏幕图片 ${imgs.loaded}/${imgs.total} 全部解码`)
+  : bad(`屏幕图片仅 ${imgs.loaded}/${imgs.total} 解码`);
 
 const structure = await p.evaluate(() => ({
-  cards: document.querySelectorAll('[data-student-id]').length,
   slots: document.querySelectorAll('[data-live-slot]').length,
   h1: document.querySelector('h1')?.textContent,
 }));
-structure.cards === 200 && structure.slots === 15
-  ? ok(`结构正确：${structure.cards} 学生卡 / ${structure.slots} 学院格`)
-  : bad(`结构异常：${structure.cards} 卡 / ${structure.slots} 格`);
+structure.slots === 15
+  ? ok(`结构正确：${structure.slots} 个学院格`)
+  : bad(`结构异常：${structure.slots} 格`);
+
+// 2.1b 校徽可见性（11 个素材是白色透明底，必须压深）
+const emblemLums = await p.evaluate(async () => {
+  const slots = [...document.querySelectorAll('[data-live-slot]')];
+  const out = [];
+  for (const s of slots) {
+    const img = s.querySelector('img');
+    if (!img) continue;
+    const cs = getComputedStyle(img);
+    await (img.complete && img.naturalWidth
+      ? Promise.resolve()
+      : new Promise((r) => {
+          img.onload = r;
+          img.onerror = r;
+        }));
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const g = c.getContext('2d');
+    g.filter = cs.filter;
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] > 32) {
+        n++;
+        sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      }
+    }
+    const op = Number(cs.opacity);
+    out.push(Math.round((n ? sum / n : 255) * op + 250 * (1 - op)));
+  }
+  return out;
+});
+const invisible = emblemLums.filter((l) => l > 200);
+invisible.length === 0
+  ? ok(`校徽全部可见（${emblemLums.length} 个，最高亮度 ${Math.max(...emblemLums)}）`)
+  : bad(`${invisible.length}/${emblemLums.length} 个校徽几乎不可见`);
 
 // 2.2 填老师名字
 await p.getByPlaceholder('写下你的名字').fill('线上验收');
 await p.waitForTimeout(300);
 ok('填入老师名字');
 
-// 2.3 弹窗选人
+// 2.3 点学院格 → 弹窗只列本学院 → 点学生入格
 await p.locator('[data-live-slot="abydos"]').click();
 await p.waitForTimeout(500);
+const modalScope = await p.evaluate(() => {
+  const dlg = document.querySelector('[role="dialog"]');
+  return { open: !!dlg, cards: dlg?.querySelectorAll('[class*="card"]').length ?? 0 };
+});
+modalScope.open && modalScope.cards > 0
+  ? ok(`弹窗打开并列出 ${modalScope.cards} 名阿拜多斯学生`)
+  : bad(`弹窗异常：open=${modalScope.open} cards=${modalScope.cards}`);
+
 await p.locator('[role="dialog"] [class*="cardImg"]').first().click();
 await p.waitForTimeout(500);
 const prog = await p.locator('[class*="progress"] b').first().innerText();
-prog === '1' ? ok('弹窗选择生效，进度 1/15') : bad(`进度异常：${prog}`);
+prog === '1' ? ok('点学生后入格，进度 1/15') : bad(`进度异常：${prog}`);
 
-// 2.4 拖拽
-const dragId = await p.evaluate(() => document.querySelector('[data-student-id]')?.getAttribute('data-student-id'));
-const dragOk = await p.evaluate(async (id) => {
-  const card = document.querySelector(`[data-student-id="${id}"]`);
-  const slot = document.querySelector('[data-live-slot="gehenna"]');
-  const dt = new DataTransfer();
-  const fire = (el, t) => el.dispatchEvent(new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt }));
-  fire(card, 'dragstart');
-  fire(slot, 'dragover');
-  fire(slot, 'drop');
-  fire(card, 'dragend');
-  await new Promise((r) => setTimeout(r, 500));
-  return !!slot.querySelector('img[class*="slotFace"]');
-}, dragId);
-dragOk ? ok('拖拽投放生效') : bad('拖拽投放失败');
-
-// 2.5 搜索
-await p.getByPlaceholder('搜索学生名 / 韩文名').fill('白子');
-await p.waitForTimeout(600);
-const hits = await p.evaluate(() => [...document.querySelectorAll('[data-student-id] b')].map((b) => b.textContent));
-hits.length > 0 ? ok(`搜索「白子」命中 ${hits.length}：${hits.join('、')}`) : bad('搜索无结果');
-await p.getByPlaceholder('搜索学生名 / 韩文名').fill('');
+// 2.4 弹窗内中文搜索
+await p.locator('[data-live-slot="millennium"]').click();
 await p.waitForTimeout(400);
+await p.locator('[role="dialog"] input').fill('白');
+await p.waitForTimeout(500);
+const searchHits = await p.evaluate(() =>
+  [...document.querySelectorAll('[role="dialog"] [class*="cardInfo"] b')].map((b) => b.textContent)
+);
+searchHits.length > 0 && searchHits.every((n) => n.includes('白'))
+  ? ok(`弹窗内搜索「白」命中 ${searchHits.length} 名`)
+  : bad(`弹窗搜索异常：${searchHits.join('、') || '(空)'}`);
+await p.keyboard.press('Escape');
+await p.waitForTimeout(300);
 
 // 2.6 导出
 console.log('\n--- 导出 ---');

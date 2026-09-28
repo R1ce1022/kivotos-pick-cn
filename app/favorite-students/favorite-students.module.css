@@ -297,7 +297,7 @@
 .slot {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1.02;
+  aspect-ratio: 1;
   min-height: 118px;
   display: flex;
   flex-direction: column;
@@ -319,19 +319,13 @@
     transform 0.16s;
 }
 .slot:hover,
-.slot:focus-visible,
-.slotArmed {
+.slot:focus-visible {
   border-color: var(--accent-2);
   box-shadow: inset 0 0 0 2px var(--accent-soft);
 }
 .slotFilled {
   background: var(--surface);
   border-color: var(--accent-2);
-}
-.slotOver {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  transform: scale(1.03);
 }
 
 /* 学院强调色横条：导出图里的彩色标识 */
@@ -367,20 +361,14 @@
   padding: 12px 10px;
 }
 
+/* 校徽素材是「白色图形 + 透明底」，浅色主题下必须压成深色才可见
+   （11 个来自 SchaleDB 的校徽是纯白 255,255,255，不压深等于隐形）。
+   三处校徽保持一致：槽位、导出模板、弹窗标题。 */
 .slotEmblem {
   width: 46%;
   max-width: 84px;
-  opacity: 0.5;
-}
-
-.slotName {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.25;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  filter: brightness(0) saturate(100%);
+  opacity: 0.72;
 }
 
 .slotAcademy {
@@ -529,12 +517,13 @@
   justify-content: center;
   height: 70px;
 }
-/* 校徽素材是白色透明底，浅色背景上必须压成深色才可见 */
+/* 校徽压深说明见 .slotEmblem */
 .exportLogo img {
   max-width: 150px;
   max-height: 68px;
   object-fit: contain;
-  filter: brightness(0) saturate(100%) opacity(0.88);
+  filter: brightness(0) saturate(100%);
+  opacity: 0.72;
 }
 
 .exportSlot {
@@ -591,95 +580,7 @@
   padding: 62px 58px 42px;
 }
 
-/* ---------------- 学生名单 ---------------- */
-.roster {
-  margin-top: 26px;
-  padding: 26px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.rosterHead {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-height: 34px;
-  margin-bottom: 18px;
-}
-.stepBadge {
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-}
-.rosterTitle {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-}
-.rosterCount {
-  margin-left: auto;
-  font-size: 0.78rem;
-  color: var(--text-mute);
-}
-
-.rosterTools {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.tabs {
-  display: flex;
-  gap: 7px;
-  flex: 1;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 13px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  white-space: nowrap;
-  background: var(--surface-2);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius-pill);
-  transition: 0.16s;
-}
-.tab i {
-  font-style: normal;
-  font-size: 0.66rem;
-  color: var(--text-mute);
-}
-.tabActive {
-  color: #fff;
-  background: var(--accent-deep);
-  border-color: var(--accent-deep);
-}
-.tabActive i {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-@media (hover: hover) {
-  .tab:hover {
-    color: var(--accent-deep);
-    border-color: var(--accent-border);
-  }
-  .tabActive:hover {
-    color: #fff;
-  }
-}
-
+/* ---------------- 弹窗内的搜索与列表 ---------------- */
 .searchBox {
   display: flex;
   align-items: center;
@@ -722,48 +623,7 @@
   color: var(--accent-deep);
 }
 
-.pendingBar {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  font-size: 0.84rem;
-  color: var(--text);
-  background: var(--ok-soft);
-  border: 1px solid rgba(59, 159, 114, 0.4);
-  border-radius: var(--radius-sm);
-}
-.pendingBar img {
-  width: 34px;
-  height: 34px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-.pendingBar b {
-  color: var(--ok);
-}
-.pendingBar button {
-  margin-left: auto;
-  padding: 8px 14px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius-pill);
-}
-.pendingBar button:hover {
-  color: var(--accent-deep);
-  border-color: var(--accent-border);
-}
-
-/* 学生卡片网格：名单区与弹窗区列数策略不同，故分为两个类 */
-.gridRoster {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 11px;
-}
+/* 学生卡片网格（仅弹窗内使用） */
 .gridModal {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
@@ -785,25 +645,14 @@
   user-select: none;
   touch-action: manipulation;
 }
-.cardDragging {
-  opacity: 0.45;
-  transform: scale(0.97);
-}
 .cardPending {
   border-color: var(--ok);
   box-shadow: 0 0 0 3px var(--ok-soft);
 }
-.cardPlaced {
-  border-color: var(--accent-border);
-  background: var(--surface-2);
-}
 
 @media (hover: hover) {
   .card {
-    cursor: grab;
-  }
-  .card:active {
-    cursor: grabbing;
+    cursor: pointer;
   }
   .card:hover {
     border-color: var(--accent-2);
@@ -842,51 +691,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.cardInfo small {
-  font-size: 0.66rem;
-  color: var(--text-mute);
-}
-
-.cardCheck {
-  position: absolute;
-  top: 5px;
-  right: 7px;
-  font-size: 11px;
-  color: var(--accent-deep);
-}
 
 .empty {
   padding: 30px 0;
   font-size: 0.84rem;
   color: var(--text-mute);
   text-align: center;
-}
-
-.resultHint {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 14px;
-  font-size: 0.78rem;
-  color: var(--text-mute);
-}
-.resultHint b {
-  color: var(--accent-deep);
-}
-.resultHint button {
-  margin-left: 8px;
-  padding: 6px 12px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius-pill);
-}
-.resultHint button:hover {
-  color: var(--accent-deep);
-  border-color: var(--accent-border);
 }
 
 /* ---------------- 弹窗 ---------------- */
@@ -931,8 +741,9 @@
   width: 42px;
   height: 42px;
   object-fit: contain;
-  /* 校徽白色底 → 压深以适应浅色主题 */
-  filter: brightness(0) saturate(100%) opacity(0.85);
+  /* 校徽压深说明见 .slotEmblem */
+  filter: brightness(0) saturate(100%);
+  opacity: 0.72;
 }
 .modalHead h3 {
   margin: 0;
@@ -962,28 +773,16 @@
   border-color: var(--accent-border);
 }
 
-.modalTabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 3px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.modalTabs::-webkit-scrollbar {
-  display: none;
-}
-.modalTabs .tab {
-  flex: 0 0 auto;
-}
-
 .modalFoot {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 10px;
   padding-top: 14px;
   border-top: 1px solid var(--border-2);
+}
+/* 「清空此格」靠左，「完成」靠右 */
+.modalFoot .ghostBtn {
+  margin-right: auto;
 }
 
 /* ---------------- 提示与页脚 ---------------- */
@@ -1072,10 +871,6 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
-  .cardImg {
-    width: 38px;
-    height: 38px;
-  }
 }
 
 /* 手机 */
@@ -1108,45 +903,9 @@
   .captureArea:not(.captureExport) {
     padding: 18px 14px 16px;
   }
-  .roster {
-    padding: 18px 14px;
-  }
   .board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 10px;
-  }
-  .gridRoster {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* 学院标签改为单行横向滚动，避免堆成 4 行占掉 240px 高度 */
-  .tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 3px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .tabs::-webkit-scrollbar {
-    display: none;
-  }
-  .tabs .tab {
-    flex: 0 0 auto;
-  }
-
-  .searchBox {
-    width: 100%;
-  }
-
-  /* 选中反馈固定在底部：否则它渲染在名单上方（视口外 2000+ px 处），用户看不到 */
-  .pendingBar {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    z-index: 80;
-    margin: 0;
-    box-shadow: var(--shadow-lg);
   }
 
   .slotClear {
@@ -1168,23 +927,12 @@
   }
 }
 
-/* 窄屏：进一步收紧卡片，保证 2 列不溢出 */
+/* 窄屏：收紧选择板间隙 */
 @media (max-width: 375px) {
   .page {
     padding: 0 12px 60px;
   }
-  .gridRoster {
-    gap: 8px;
-  }
-  .card {
-    gap: 8px;
-    padding: 7px 8px;
-  }
-  .cardImg {
-    width: 34px;
-    height: 34px;
-  }
-  .cardInfo b {
-    font-size: 0.78rem;
+  .board {
+    gap: 10px 8px;
   }
 }

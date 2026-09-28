@@ -15,18 +15,13 @@ interface Props {
   total: number;
   studentCount: number;
   /**
-   * live   → 屏幕上可见的那份，槽位可点、可拖、可键盘操作
+   * live   → 屏幕上可见的那份，槽位可点、可键盘操作
    * export → 固定尺寸的离屏节点，仅用于截图，不参与任何交互
    */
   variant: 'live' | 'export';
   // 以下仅在 variant === 'live' 时传入
-  pendingActive?: boolean;
-  dragOverAcademy?: string | null;
   onSlotClick?: (academyId: string) => void;
   onSlotClear?: (academyId: string) => void;
-  onSlotDrop?: (e: React.DragEvent, academyId: string) => void;
-  onSlotDragOver?: (e: React.DragEvent, academyId: string) => void;
-  onSlotDragLeave?: (academyId: string) => void;
 }
 
 /**
@@ -47,13 +42,8 @@ export default function CaptureBoard({
   total,
   studentCount,
   variant,
-  pendingActive = false,
-  dragOverAcademy = null,
   onSlotClick,
   onSlotClear,
-  onSlotDrop,
-  onSlotDragOver,
-  onSlotDragLeave,
 }: Props) {
   const isLive = variant === 'live';
 
@@ -67,8 +57,8 @@ export default function CaptureBoard({
     ) : (
       <>
         <img className={styles.slotEmblem} src={a.emblem} alt="" draggable={false} />
-        <span className={styles.slotPlaceholder}>{isLive ? '未选择' : '未选择'}</span>
-        {isLive && <div className={styles.slotAcademy}>{a.short}</div>}
+        <span className={styles.slotPlaceholder}>未选择</span>
+        <div className={styles.slotAcademy}>{a.short}</div>
         <div className={styles.slotPlus}>+</div>
         <i className={styles.slotAccent} style={{ backgroundColor: a.accent }} aria-hidden="true" />
       </>
@@ -143,13 +133,7 @@ export default function CaptureBoard({
       <div className={styles.board}>
         {academies.map((a, i) => {
           const picked = slots[a.id];
-          const isOver = dragOverAcademy === a.id;
-          const slotClass = [
-            styles.slot,
-            picked ? styles.slotFilled : styles.slotEmpty,
-            isOver ? styles.slotOver : '',
-            pendingActive ? styles.slotArmed : '',
-          ]
+          const slotClass = [styles.slot, picked ? styles.slotFilled : styles.slotEmpty]
             .filter(Boolean)
             .join(' ');
 
@@ -163,9 +147,6 @@ export default function CaptureBoard({
                 aria-pressed={!!picked}
                 aria-label={picked ? `${a.name}，已选${picked.name}` : `${a.name}，未选择`}
                 onClick={() => onSlotClick?.(a.id)}
-                onDragOver={(e) => onSlotDragOver?.(e, a.id)}
-                onDragLeave={() => onSlotDragLeave?.(a.id)}
-                onDrop={(e) => onSlotDrop?.(e, a.id)}
               >
                 <div className={styles.slotIndex}>{String(i + 1).padStart(2, '0')}</div>
                 {renderSlotInner(a, picked)}

@@ -16,11 +16,19 @@ for (const s of students) studentsByAcademy.get(s.academyId)?.push(s);
 
 const emptySlots = (): Slots => Object.fromEntries(academies.map((a) => [a.id, null]));
 
-/** 归一化搜索：忽略大小写、空白、中英文括号差异 */
-const norm = (v: string) => v.toLowerCase().replace(/[\s()（）·・]/g, '');
+/**
+ * 归一化搜索：只支持中文，因此仅消除全/半角括号与星号差异，
+ * 让「白子(恐怖)」也能匹配到「白子＊恐怖」。
+ */
+const norm = (v: string) => v.replace(/[()（）*＊]/g, '').trim();
 
-/** 学院名查表，避免每次渲染都遍历 */
-const academyShort = new Map(academies.map((a) => [a.id, a.short]));
+/**
+ * 是否具备悬停能力（桌面）。
+ * 仅在导出流程内惰性求值——放到模块顶层会在 SSR 时得到 false、
+ * 客户端得到 true，造成水合不一致。
+ */
+const hasHover = () =>
+  typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 /** 把一张图片转成自包含的 data URL（不依赖任何路径解析） */
 const toDataUrl = (src: string): Promise<string> =>
@@ -56,20 +64,14 @@ const dataUrlToBlob = (dataUrl: string): Blob => {
 export default function FavoriteStudentsPage() {
   const [slots, setSlots] = useState<Slots>(emptySlots);
   const [teacher, setTeacher] = useState('');
-  const [tab, setTab] = useState<string>('all');
   const [query, setQuery] = useState('');
   const [pickerAcademy, setPickerAcademy] = useState<Academy | null>(null);
-  const [pendingStudent, setPendingStudent] = useState<Student | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverAcademy, setDragOverAcademy] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [saveHint, setSaveHint] = useState<string | null>(null);
-  /** 是否具备精确指针 + 悬停能力：决定启用拖拽、悬停显隐与文案 */
-  const [canHover, setCanHover] = useState(false);
 
   const exportRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const pickerSearchRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | null>(null);
 
   const selectedCount = useMemo(() => Object.values(slots).filter(Boolean).length, [slots]);
@@ -83,15 +85,6 @@ export default function FavoriteStudentsPage() {
     : /老师$/.test(trimmedName)
       ? trimmedName
       : `${trimmedName} 老师`;
-
-  // 指针能力探测：触屏设备走「点选」路径，不启用原生拖拽
-  useEffect(() => {
-    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
-    const apply = () => setCanHover(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
 
   // 卸载时清掉未触发的提示定时器，避免对已卸载组件 setState
   useEffect(
@@ -121,7 +114,6 @@ export default function FavoriteStudentsPage() {
       next[academyId] = student;
       return next;
     });
-    setPendingStudent(null);
     setPickerAcademy(null);
   }, []);
 
@@ -132,8 +124,6 @@ export default function FavoriteStudentsPage() {
   const resetAll = useCallback(() => {
     setSlots(emptySlots());
     setTeacher('');
-    setPendingStudent(null);
-    setTab('all');
     setQuery('');
     showToast('已重置全部选择');
   }, [showToast]);
@@ -142,58 +132,10 @@ export default function FavoriteStudentsPage() {
   const openPicker = useCallback((academy: Academy) => {
     setPickerAcademy(academy);
     setQuery('');
-    setTab(academy.id);
   }, []);
 
-  // ---------- 拖拽（仅桌面） ----------
-  // 不完全依赖 dataTransfer（部分环境取不到值），用 draggingId 兜底。
-  const onCardDragStart = (e: React.DragEvent, student: Student) => {
-    e.dataTransfer.setData('text/plain', student.id);
-    e.dataTransfer.effectAllowed = 'move';
-    setDraggingId(student.id);
-  };
-
-  const onCardDragEnd = () => {
-    setDraggingId(null);
-    setDragOverAcademy(null);
-  };
-
-  const onSlotDrop = (e: React.DragEvent, academyId: string) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain') || draggingId || '';
-    const student = students.find((s) => s.id === id);
-    if (student) assign(academyId, student);
-    setDraggingId(null);
-    setDragOverAcademy(null);
-  };
-
-  const onSlotDragOver = (e: React.DragEvent, academyId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverAcademy(academyId);
-  };
-
-  const onSlotDragLeave = (academyId: string) => {
-    setDragOverAcademy((cur) => (cur === academyId ? null : cur));
-  };
-
-  // ---------- 移动端：先点学生、再点学院格 ----------
-  const onCardClick = (student: Student) => {
-    if (pendingStudent?.id === student.id) {
-      setPendingStudent(null);
-      return;
-    }
-    setPendingStudent(student);
-    if (!canHover) {
-      showToast(`已选中「${student.name}」，再点学院格放入`);
-    }
-  };
-
+  // ---------- 点学院格 → 打开该学院的选人弹窗 ----------
   const onSlotClick = (academyId: string) => {
-    if (pendingStudent) {
-      assign(academyId, pendingStudent);
-      return;
-    }
     const academy = academies.find((a) => a.id === academyId);
     if (academy) openPicker(academy);
   };
@@ -204,41 +146,24 @@ export default function FavoriteStudentsPage() {
       if (e.key === 'Escape') setPickerAcademy(null);
     };
     window.addEventListener('keydown', onKey);
-    const t = window.setTimeout(() => searchRef.current?.focus(), 60);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.clearTimeout(t);
-    };
+    // 刻意不自动聚焦搜索框：多数情况用不到，自动聚焦会唤起移动端键盘挡住列表
+    return () => window.removeEventListener('keydown', onKey);
   }, [pickerAcademy]);
 
-  // 底部列表：有关键词时跨学院全局搜索；无关键词时按学院标签筛选。
-  // （若两者叠加，用户在「三一」标签下搜「白子」会得到空结果，极易困惑）
-  const listedStudents = useMemo(() => {
-    const q = norm(query);
-    return students.filter((s) => {
-      if (q) {
-        if (norm(s.name).includes(q)) return true;
-        return s.aliases.some((a) => norm(a).includes(q));
-      }
-      return tab === 'all' || s.academyId === tab;
-    });
-  }, [tab, query]);
-
-  // 弹窗列表：优先只显示本学院，搜索时跨学院
+  // 弹窗列表：只看本学院，搜索也仅在本学院内进行
   const pickerStudents = useMemo(() => {
+    if (!pickerAcademy) return [];
+    const all = studentsByAcademy.get(pickerAcademy.id) ?? [];
     const q = norm(query);
-    if (q) {
-      return students.filter((s) => norm(s.name).includes(q) || s.aliases.some((a) => norm(a).includes(q)));
-    }
-    if (tab === 'all') return students;
-    return studentsByAcademy.get(tab) ?? [];
-  }, [tab, query]);
+    if (!q) return all;
+    return all.filter((s) => norm(s.name).includes(q));
+  }, [pickerAcademy, query]);
 
   // ---------- 导出图片 ----------
   /**
    * 生成图片并尽力触发保存。
    *
-   * 截图目标是**离屏的固定 1200px 节点**（exportRef），不是屏幕上那份，
+   * 截图目标是**离屏的固定尺寸节点**（exportRef），不是屏幕上那份，
    * 因此同一份选择在手机与电脑上导出的图片完全一致。
    */
   const exportImage = useCallback(async () => {
@@ -305,7 +230,7 @@ export default function FavoriteStudentsPage() {
       // （实测 Chrome/Windows 挂满 30 秒才落回），用户会以为卡死。
       // 因此超时就放弃分享、直接下载；同时把可能仍在挂起的 promise 吞掉，
       // 避免它稍后 reject 变成未处理拒绝。
-      if (canHover) {
+      if (hasHover()) {
         setSaveHint('若未自动保存，可右键图片另存为。');
       }
       let sharePending: Promise<void> | null = null;
@@ -337,12 +262,12 @@ export default function FavoriteStudentsPage() {
       link.rel = 'noopener';
       link.click();
 
-      // 移动端浏览器可能忽略 download 属性，补一个可在新标签打开的入口
-      if (!canHover) {
+      // 触屏浏览器可能忽略 download 属性，补一个可在新标签打开的入口
+      if (!hasHover()) {
         const win = window.open('', '_blank');
         if (win) {
           win.document.write(
-            `<title>${filename}</title><body style="margin:0;background:#0b1220;display:grid;place-items:center;min-height:100vh"><img src="${dataUrl}" style="max-width:100%" alt="学院最爱学生"></body>`
+            `<title>${filename}</title><body style="margin:0;background:#f7fbfd;display:grid;place-items:center;min-height:100vh"><img src="${dataUrl}" style="max-width:100%" alt="学院最爱学生"></body>`
           );
           win.document.close();
           setSaveHint('若未自动保存，可在此新标签内长按图片保存。');
@@ -360,7 +285,7 @@ export default function FavoriteStudentsPage() {
       window.fetch = nativeFetch;
       setExporting(false);
     }
-  }, [showToast, trimmedName, canHover]);
+  }, [showToast, trimmedName]);
 
   const boardProps = {
     academies,
@@ -403,11 +328,7 @@ export default function FavoriteStudentsPage() {
           <br />
           你最爱的那一名
         </h1>
-        <p className={styles.missionHint}>
-          {canHover
-            ? '把学生卡直接拖到学院格里；也可以点学院格打开选择列表。'
-            : '先点学生，再点想要放入的学院格即可。'}
-        </p>
+        <p className={styles.missionHint}>点击学院格，从该学院里挑一名你最喜欢的学生。</p>
 
         <div className={styles.missionBar}>
           <label className={styles.teacherField}>
@@ -438,13 +359,8 @@ export default function FavoriteStudentsPage() {
       <CaptureBoard
         {...boardProps}
         variant="live"
-        pendingActive={!!pendingStudent}
-        dragOverAcademy={dragOverAcademy}
         onSlotClick={onSlotClick}
         onSlotClear={clearSlot}
-        onSlotDrop={onSlotDrop}
-        onSlotDragOver={onSlotDragOver}
-        onSlotDragLeave={onSlotDragLeave}
       />
 
       {/* ============ 离屏导出节点（固定版式，仅用于截图） ============ */}
@@ -453,109 +369,6 @@ export default function FavoriteStudentsPage() {
           <CaptureBoard {...boardProps} variant="export" />
         </div>
       </div>
-
-      {/* ============ 学生总列表 ============ */}
-      <section className={styles.roster}>
-        <div className={styles.rosterHead}>
-          <div className={styles.stepBadge}>02</div>
-          <h2 className={styles.rosterTitle}>学生名单</h2>
-          <span className={styles.rosterCount}>{students.length} 名</span>
-        </div>
-
-        <div className={styles.rosterTools}>
-          <div className={styles.tabs}>
-            <button
-              className={`${styles.tab} ${tab === 'all' ? styles.tabActive : ''}`}
-              onClick={() => setTab('all')}
-            >
-              全部
-            </button>
-            {academies.map((a) => (
-              <button
-                key={a.id}
-                className={`${styles.tab} ${tab === a.id ? styles.tabActive : ''}`}
-                onClick={() => setTab(a.id)}
-              >
-                {a.short}
-                <i>{a.count}</i>
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.searchBox}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索学生名 / 韩文名"
-            />
-            {query && (
-              <button className={styles.clearQuery} onClick={() => setQuery('')} aria-label="清空搜索">
-                ×
-              </button>
-            )}
-          </div>
-        </div>
-
-        {pendingStudent && (
-          <div className={styles.pendingBar}>
-            <img src={pendingStudent.icon} alt="" />
-            <span>
-              已选中「<b>{pendingStudent.name}</b>」——点上方学院格放入
-            </span>
-            <button onClick={() => setPendingStudent(null)}>取消</button>
-          </div>
-        )}
-
-        {query && (
-          <p className={styles.resultHint}>
-            搜索「<b>{query}</b>」· 已跨全部学院 · 命中 {listedStudents.length} 名
-            <button onClick={() => setQuery('')}>清除搜索</button>
-          </p>
-        )}
-
-        <div className={styles.gridRoster}>
-          {listedStudents.map((s) => {
-            const isPending = pendingStudent?.id === s.id;
-            const placedIn = Object.entries(slots).find(([, v]) => v?.id === s.id)?.[0];
-            return (
-              <div
-                key={s.id}
-                data-student-id={s.id}
-                className={[
-                  styles.card,
-                  draggingId === s.id ? styles.cardDragging : '',
-                  isPending ? styles.cardPending : '',
-                  placedIn ? styles.cardPlaced : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                draggable={canHover}
-                onDragStart={canHover ? (e) => onCardDragStart(e, s) : undefined}
-                onDragEnd={canHover ? onCardDragEnd : undefined}
-                onClick={() => onCardClick(s)}
-                title={`${s.name}${s.aliases.length ? `（${s.aliases[0]}）` : ''}`}
-              >
-                <span className={styles.cardImg}>
-                  <img src={s.icon} alt="" loading="lazy" draggable={false} />
-                </span>
-                <span className={styles.cardInfo}>
-                  <b>{s.name}</b>
-                  <small>{academyShort.get(s.academyId)}</small>
-                </span>
-                {placedIn && <span className={styles.cardCheck}>✓</span>}
-              </div>
-            );
-          })}
-        </div>
-
-        {listedStudents.length === 0 && (
-          <p className={styles.empty}>没有匹配「{query}」的学生</p>
-        )}
-      </section>
 
       {/* ============ 学院选择弹窗 ============ */}
       {pickerAcademy && (
@@ -584,10 +397,10 @@ export default function FavoriteStudentsPage() {
                 <path d="m21 21-4.3-4.3" />
               </svg>
               <input
-                ref={searchRef}
+                ref={pickerSearchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="输入名字搜索（留空则按学院显示）"
+                placeholder="在本学院内搜索名字"
               />
               {query && (
                 <button className={styles.clearQuery} onClick={() => setQuery('')} aria-label="清空搜索">
@@ -595,26 +408,6 @@ export default function FavoriteStudentsPage() {
                 </button>
               )}
             </div>
-
-            {!query && (
-              <div className={styles.modalTabs}>
-                <button
-                  className={`${styles.tab} ${tab === 'all' ? styles.tabActive : ''}`}
-                  onClick={() => setTab('all')}
-                >
-                  全部
-                </button>
-                {academies.map((a) => (
-                  <button
-                    key={a.id}
-                    className={`${styles.tab} ${tab === a.id ? styles.tabActive : ''}`}
-                    onClick={() => setTab(a.id)}
-                  >
-                    {a.short}
-                  </button>
-                ))}
-              </div>
-            )}
 
             <div className={styles.gridModal}>
               {pickerStudents.map((s) => (
@@ -628,7 +421,6 @@ export default function FavoriteStudentsPage() {
                   </span>
                   <span className={styles.cardInfo}>
                     <b>{s.name}</b>
-                    <small>{academyShort.get(s.academyId)}</small>
                   </span>
                 </div>
               ))}

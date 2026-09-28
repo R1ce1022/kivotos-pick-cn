@@ -7,8 +7,6 @@ export interface Student {
   academyId: string;
   /** 头像路径 */
   icon: string;
-  /** 检索别名：韩文名 / 英文名 / 路径名 */
-  aliases: string[];
 }
 
 export interface Academy {

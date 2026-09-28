@@ -6,6 +6,8 @@
  *   - 剧情 NPC：SchaleDB 未收录，中文名由手工映射表提供
  *   - 联动角色：仅下载素材，不进选择列表
  *
+ * 每名学生只保留中文名：站内搜索只支持中文，因此不再生成多语言别名。
+ *
  * 产出 data/students.json：{ generatedAt, source, stats, academies[], students[] }
  */
 import fs from 'node:fs';
@@ -19,14 +21,12 @@ import {
 } from './academies.mjs';
 
 const cnFile = path.join(CACHE_DIR, 'schaledb-students-cn.json');
-const krFile = path.join(CACHE_DIR, 'kr.json');
 
 if (!fs.existsSync(cnFile)) {
   throw new Error(`缺少简中数据 ${cnFile}，请先执行 npm run fetch:data`);
 }
 
 const cn = JSON.parse(fs.readFileSync(cnFile, 'utf8'));
-const kr = fs.existsSync(krFile) ? JSON.parse(fs.readFileSync(krFile, 'utf8')) : {};
 
 const codeToAcademy = new Map();
 for (const a of ACADEMIES) for (const c of a.schaleCodes) codeToAcademy.set(c, a.id);
@@ -56,17 +56,12 @@ for (const s of Object.values(cn)) {
     continue;
   }
 
-  // 搜索用别名：韩文名、英文名、日文名，方便中文用户按习惯检索
-  const aliases = [kr[String(s.Id)]?.Name, s.DevName, s.PathName]
-    .filter((x) => typeof x === 'string' && x.trim() && x !== name)
-    .map((x) => x.trim());
-
+  // 站内搜索只支持中文，因此不再收集韩文/英文别名
   students.push({
     id: `s${s.Id}`,
     name,
     academyId,
     icon: `/assets/students/${s.Id}.webp`,
-    aliases: [...new Set(aliases)],
     sortKey: s.Id,
   });
   stats.base++;
@@ -79,7 +74,6 @@ for (const [i, n] of NPC_STUDENTS.entries()) {
     name: n.name,
     academyId: n.academyId,
     icon: `/assets/students/${n.slug}.webp`,
-    aliases: [],
     // NPC 排在学生之后，内部按配置表顺序
     sortKey: 1000000 + i,
   });
