@@ -139,7 +139,9 @@ await p.locator('[data-live-slot="abydos"]').click();
 await p.waitForTimeout(500);
 const modalScope = await p.evaluate(() => {
   const dlg = document.querySelector('[role="dialog"]');
-  return { open: !!dlg, cards: dlg?.querySelectorAll('[class*="card"]').length ?? 0 };
+  // 必须用 cardImg 计数：外层 .card 与内层 .cardImg/.cardInfo 都含 "card" 子串，
+  // 直接查 [class*="card"] 会把一名学生数成 3 个。
+  return { open: !!dlg, cards: dlg?.querySelectorAll('[class*="cardImg"]').length ?? 0 };
 });
 modalScope.open && modalScope.cards > 0
   ? ok(`弹窗打开并列出 ${modalScope.cards} 名阿拜多斯学生`)

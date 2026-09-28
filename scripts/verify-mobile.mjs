@@ -131,10 +131,11 @@ console.log('\n=== 3. 触屏交互 ===');
 
   // 不应存在可拖拽元素（拖拽已移除）
   const drag = await p.evaluate(() => ({
-    total: document.querySelectorAll('[data-live-slot], [class*="card"]').length,
+    // 交互元素 = 屏幕槽位；用 class*="card" 会把 .card/.cardImg/.cardInfo 重复计数
+    total: document.querySelectorAll('[data-live-slot]').length,
     draggable: document.querySelectorAll('[draggable="true"]').length,
   }));
-  is(drag.draggable, 0, `可拖拽元素数（共 ${drag.total} 个交互元素）`);
+  is(drag.draggable, 0, `可拖拽元素数（共 ${drag.total} 个槽位）`);
 
   // 点槽位 → 弹窗 → 点学生 → 入格
   await p.locator('[data-live-slot="abydos"]').click();
