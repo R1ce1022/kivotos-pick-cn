@@ -1,0 +1,32 @@
+{
+  "name": "kivotos-pick-cn",
+  "version": "0.1.0",
+  "private": true,
+  "description": "蔚蓝档案「学院最爱学生」选择器 —— 国内可访问的简体中文镜像复刻",
+  "scripts": {
+    "fetch:data": "node scripts/fetch-schaledb-data.mjs",
+    "align": "node scripts/align-target.mjs",
+    "fetch:assets": "node scripts/fetch-assets.mjs",
+    "build:data": "node scripts/build-students.mjs",
+    "prepare:all": "npm run fetch:data && npm run align && npm run fetch:assets && npm run build:data",
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "node scripts/serve-out.mjs 4173",
+    "verify": "node scripts/verify-ui.mjs",
+    "start": "next start"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "next": "^16.3.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "playwright": "^1.63.0",
+    "typescript": "^5.9.0",
+    "undici": "^8.11.2"
+  }
+}

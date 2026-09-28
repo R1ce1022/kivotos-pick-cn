@@ -1,0 +1,855 @@
+/* ============================================================
+   学院最爱学生 —— 页面样式
+   布局节奏对齐原站：顶栏 / 任务说明 / 选择板 / 学生名单
+   ============================================================ */
+
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ---------------- 顶栏 ---------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(14px);
+  background: linear-gradient(to bottom, rgba(11, 18, 32, 0.94), rgba(11, 18, 32, 0.72));
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  transition: 0.18s;
+}
+.back:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--panel);
+}
+
+.brand {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  justify-content: center;
+}
+.brandMark {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.brandText {
+  font-size: 13px;
+  color: var(--text-mute);
+  letter-spacing: 0.22em;
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #04121f;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: 99px;
+  box-shadow: 0 6px 20px rgba(79, 195, 247, 0.28);
+  transition: 0.18s;
+}
+.saveBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(79, 195, 247, 0.4);
+}
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ---------------- 任务说明 ---------------- */
+.mission {
+  padding: 34px 0 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.missionLabel {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  padding: 5px 12px;
+  border: 1px solid rgba(79, 195, 247, 0.35);
+  border-radius: 99px;
+  background: var(--accent-soft);
+}
+
+.missionTitle {
+  margin: 18px 0 12px;
+  font-size: clamp(28px, 4.6vw, 46px);
+  line-height: 1.16;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.missionHint {
+  margin: 0 0 26px;
+  max-width: 620px;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.missionBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.teacherField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.teacherField > span {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  font-weight: 700;
+}
+.teacherField input {
+  width: 230px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: 0.18s;
+}
+.teacherField input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.progress {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.progress b {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+.progress > span {
+  font-size: 13px;
+  color: var(--text-mute);
+}
+.progressTrack {
+  flex-basis: 100%;
+  height: 7px;
+  margin-top: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 99px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.missionActions {
+  display: flex;
+  gap: 10px;
+}
+
+.ghostBtn {
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  transition: 0.18s;
+}
+.ghostBtn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--panel);
+}
+.ghostBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.primaryBtn {
+  padding: 10px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #04121f;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: var(--radius-sm);
+}
+.primaryBtn:hover {
+  filter: brightness(1.08);
+}
+
+/* ---------------- 导出捕获区 ---------------- */
+.captureArea {
+  margin: 30px 0;
+  padding: 26px 24px 20px;
+  background:
+    radial-gradient(700px 320px at 8% 0%, rgba(79, 195, 247, 0.13), transparent 65%),
+    linear-gradient(160deg, var(--bg-soft), var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.captureHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 22px;
+}
+.captureKicker {
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  color: var(--accent);
+  font-weight: 800;
+}
+.captureTitle h2 {
+  margin: 8px 0 0;
+  font-size: clamp(19px, 2.6vw, 27px);
+  font-weight: 800;
+  line-height: 1.3;
+}
+.captureTitle em {
+  font-style: normal;
+  color: var(--accent);
+  margin-left: 6px;
+}
+.captureCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+/* 选择板 */
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.slot {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(11, 18, 32, 0.55);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: 0.2s;
+  overflow: hidden;
+}
+.slot:hover {
+  border-color: var(--accent);
+  background: rgba(79, 195, 247, 0.07);
+}
+.slotFilled {
+  border-style: solid;
+  border-color: var(--accent);
+  background: linear-gradient(170deg, rgba(79, 195, 247, 0.16), rgba(11, 18, 32, 0.7));
+}
+.slotOver {
+  border-color: var(--accent-2);
+  background: rgba(124, 156, 255, 0.2);
+  transform: scale(1.04);
+}
+.slotArmed {
+  border-color: var(--ok);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.14);
+}
+
+.slotIndex {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-mute);
+}
+
+.slotFace {
+  width: 78%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.slotEmblem {
+  width: 46%;
+  opacity: 0.42;
+  filter: grayscale(0.4);
+}
+
+.slotName {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slotAcademy {
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.06em;
+}
+
+.slotPlaceholder {
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.slotPlus {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--border-strong);
+  line-height: 1;
+}
+
+.slotClear {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-dim);
+  background: rgba(11, 18, 32, 0.85);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  opacity: 0;
+  transition: 0.16s;
+}
+.slot:hover .slotClear,
+.slot:focus-within .slotClear {
+  opacity: 1;
+}
+.slotClear:hover {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.captureFoot {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-mute);
+  text-align: center;
+}
+
+/* ---------------- 学生名单 ---------------- */
+.roster {
+  margin-top: 46px;
+}
+
+.rosterHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.stepBadge {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  padding: 4px 10px;
+  border: 1px solid rgba(79, 195, 247, 0.35);
+  border-radius: 99px;
+  background: var(--accent-soft);
+}
+.rosterTitle {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+}
+.rosterCount {
+  font-size: 13px;
+  color: var(--text-mute);
+}
+
+.rosterTools {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.tabs {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 260px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  transition: 0.16s;
+}
+.tab:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.tab i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-mute);
+}
+.tabActive {
+  color: #04121f;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+.tabActive i {
+  color: rgba(4, 18, 31, 0.6);
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-width: 260px;
+  color: var(--text-mute);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: 0.18s;
+}
+.searchBox:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.searchBox input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 0;
+  font-size: 13.5px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+.clearQuery {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-mute);
+  background: transparent;
+  border: none;
+}
+.clearQuery:hover {
+  color: var(--text);
+}
+
+.pendingBar {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  border-radius: var(--radius-sm);
+}
+.pendingBar img {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.pendingBar b {
+  color: var(--ok);
+}
+.pendingBar button {
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+}
+.pendingBar button:hover {
+  color: var(--text);
+}
+
+/* 学生网格 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 11px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  transition: 0.16s;
+  user-select: none;
+}
+.card:hover {
+  border-color: var(--accent);
+  background: var(--panel-2);
+  transform: translateY(-2px);
+}
+.card:active {
+  cursor: grabbing;
+}
+.cardDragging {
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+.cardPending {
+  border-color: var(--ok);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.16);
+}
+.cardPlaced {
+  border-color: rgba(79, 195, 247, 0.5);
+}
+
+.cardImg {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.cardImg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cardInfo b {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cardInfo small {
+  font-size: 10.5px;
+  color: var(--text-mute);
+}
+
+.cardCheck {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.empty {
+  padding: 30px 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-mute);
+}
+
+.resultHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: var(--text-mute);
+}
+.resultHint b {
+  color: var(--accent);
+}
+.resultHint button {
+  margin-left: 8px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+}
+.resultHint button:hover {
+  color: var(--text);
+  background: var(--panel);
+}
+
+/* ---------------- 弹窗 ---------------- */
+.modalMask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 9, 18, 0.74);
+  backdrop-filter: blur(6px);
+  animation: fade 0.16s ease;
+}
+
+.modal {
+  width: min(940px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: linear-gradient(165deg, var(--bg-soft), var(--panel));
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  animation: pop 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.modalHead img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+.modalHead h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+.modalHead p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-mute);
+}
+.modalClose {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+.modalClose:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.modalTabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+.modalTabs .tab {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.gridModal {
+  overflow-y: auto;
+  padding-right: 5px;
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+}
+
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------------- 提示与页脚 ---------------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  z-index: 200;
+  transform: translateX(-50%);
+  padding: 11px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(22, 35, 58, 0.97);
+  border: 1px solid var(--accent);
+  border-radius: 99px;
+  box-shadow: var(--shadow);
+  animation: pop 0.2s ease;
+}
+
+.siteFoot {
+  margin-top: 60px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--text-mute);
+}
+.siteFoot a {
+  color: var(--accent);
+}
+.statLine {
+  opacity: 0.75;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+/* ---------------- 响应式 ---------------- */
+@media (max-width: 1024px) {
+  .board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 0 14px 60px;
+  }
+  .topbar {
+    gap: 10px;
+  }
+  .brand {
+    display: none;
+  }
+  .saveBtn {
+    margin-left: auto;
+  }
+  .board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .captureArea {
+    padding: 18px 14px 16px;
+    border-radius: 18px;
+  }
+  .teacherField {
+    width: 100%;
+  }
+  .teacherField input {
+    width: 100%;
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .searchBox {
+    min-width: 100%;
+  }
+  .slotClear {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 420px) {
+  .board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

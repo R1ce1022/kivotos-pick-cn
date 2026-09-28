@@ -1,0 +1,15 @@
+# 统一换行符，避免 Windows 上 CRLF 污染仓库与 CI
+* text=auto eol=lf
+
+# 二进制素材不做换行转换
+*.webp binary
+*.png binary
+*.ico binary
+*.jpg binary
+*.woff2 binary
+
+# 让 GitHub 正确识别语言
+*.tsx text
+*.ts text
+*.css text
+*.mjs text
