@@ -20,6 +20,20 @@ const emptySlots = (): Slots => Object.fromEntries(academies.map((a) => [a.id, n
 /** 归一化搜索：忽略大小写、空白、中英文括号差异 */
 const norm = (v: string) => v.toLowerCase().replace(/[\s()（）·・]/g, '');
 
+/** 把一张图片转成自包含的 data URL（不依赖任何路径解析） */
+const toDataUrl = (src: string): Promise<string> =>
+  fetch(src, { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+    .then(
+      (blob) =>
+        new Promise<string>((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(String(fr.result));
+          fr.onerror = () => reject(new Error('read failed'));
+          fr.readAsDataURL(blob);
+        })
+    );
+
 export default function FavoriteStudentsPage() {
   const [slots, setSlots] = useState<Slots>(emptySlots);
   const [teacher, setTeacher] = useState('');
@@ -173,29 +187,41 @@ export default function FavoriteStudentsPage() {
     setExporting(true);
     showToast('正在生成图片…');
 
-    // html-to-image 会读取克隆节点的 img.src，而克隆节点处于游离文档中，
-    // 解析 /kivotos-pick-cn/assets/... 这类「根相对路径」时会丢掉部署前缀
-    // （GitHub Pages 项目页部署在子路径下，会因此取图 404 而卡死）。
-    // 这里导出前临时换成完全绝对 URL，导出后立即还原。
+    // 导出会踩两个坑，这里一并规避：
+    //
+    // 1) html-to-image 读的是克隆节点的 img.src，而克隆节点处于游离文档中。
+    //    部署在 GitHub Pages 子路径（/kivotos-pick-cn/）时，解析这类路径会丢掉
+    //    前缀，于是去请求 https://<用户>.github.io/assets/... 拿到 404 而卡死。
+    //    → 导出前把图片内联成 data URL，自包含、不涉及任何路径解析。
+    //
+    // 2) 直接把绝对 URL 写回 DOM 会与 React 的渲染相互覆盖，曾经出现导出后
+    //    src 被还原成无前缀相对路径的情况。
+    //    → 因此不再修改 DOM 节点的 src，只替换 html-to-image 内部发起请求的地址。
     const imgs = Array.from(node.querySelectorAll('img'));
     const originals = imgs.map((img) => img.getAttribute('src'));
+    const nativeFetch = window.fetch;
+
+    // 兜底：凡是指向本站 /assets/ 的相对地址，一律补全为绝对地址
+    window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      try {
+        const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (typeof raw === 'string' && raw.startsWith('/')) {
+          return nativeFetch(new URL(raw, window.location.origin).href, init);
+        }
+      } catch {
+        /* 落回原始行为 */
+      }
+      return nativeFetch(input as RequestInfo, init);
+    }) as typeof fetch;
+
     try {
-      for (const img of imgs) {
-        const abs = new URL(img.getAttribute('src') ?? img.src, window.location.href).href;
-        img.setAttribute('src', abs);
-      }
-      if (imgs.length) {
-        await Promise.all(
-          imgs.map((img) =>
-            img.complete
-              ? Promise.resolve()
-              : new Promise<void>((res) => {
-                  img.onload = () => res();
-                  img.onerror = () => res();
-                })
-          )
-        );
-      }
+      // 内联图片（原图已加载，通常直接命中缓存）
+      const dataUrls = await Promise.all(
+        originals.map((src) => (src ? toDataUrl(src).catch(() => null) : Promise.resolve(null)))
+      );
+      imgs.forEach((img, i) => {
+        if (dataUrls[i]) img.setAttribute('src', dataUrls[i] as string);
+      });
 
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
@@ -214,10 +240,10 @@ export default function FavoriteStudentsPage() {
     } catch {
       showToast('生成图片失败，请重试');
     } finally {
-      // 无论成功失败都要还原，否则会破坏页面的相对路径与缓存
       imgs.forEach((img, i) => {
         if (originals[i] != null) img.setAttribute('src', originals[i] as string);
       });
+      window.fetch = nativeFetch;
       setExporting(false);
     }
   }, [showToast, teacher]);
