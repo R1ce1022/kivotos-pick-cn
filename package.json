@@ -13,7 +13,10 @@
     "build": "next build",
     "preview": "node scripts/serve-out.mjs 4173",
     "verify": "node scripts/verify-ui.mjs",
+    "verify:mobile": "node scripts/verify-mobile.mjs",
+    "verify:parity": "node scripts/verify-export-parity.mjs",
     "verify:pages": "node scripts/verify-basepath.mjs",
+    "verify:live": "node scripts/verify-live.mjs",
     "start": "next start"
   },
   "dependencies": {
@@ -26,7 +29,9 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "pixelmatch": "^7.2.0",
     "playwright": "^1.63.0",
+    "pngjs": "^7.0.0",
     "typescript": "^5.9.0",
     "undici": "^8.11.2"
   }

@@ -1,6 +1,12 @@
 /* ============================================================
    学院最爱学生 —— 页面样式
-   布局节奏对齐原站：顶栏 / 任务说明 / 选择板 / 学生名单
+
+   两条尺寸线必须区分清楚：
+   1) 屏幕上的观感（.captureArea / .board / .gridRoster …）
+      跟随视口断点自适应，手机上是 2 列。
+   2) 导出用的离屏节点（.exportStage 内的 .captureExport / .boardExport）
+      尺寸锁死为桌面版式，任何视口下都一致，因此断言规则必须写成
+      `:not(.xxxExport)`，不能污染导出节点。
    ============================================================ */
 
 .page {
@@ -19,7 +25,7 @@
   top: 0;
   z-index: 30;
   backdrop-filter: blur(14px);
-  background: linear-gradient(to bottom, rgba(11, 18, 32, 0.94), rgba(11, 18, 32, 0.72));
+  background: linear-gradient(to bottom, var(--ink-a94), var(--ink-a72));
 }
 
 .back {
@@ -66,16 +72,16 @@
   padding: 10px 18px;
   font-size: 13px;
   font-weight: 700;
-  color: #04121f;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  background: var(--grad-accent);
   border: none;
   border-radius: 99px;
-  box-shadow: 0 6px 20px rgba(79, 195, 247, 0.28);
+  box-shadow: 0 6px 20px var(--accent-a28);
   transition: 0.18s;
 }
 .saveBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 26px rgba(79, 195, 247, 0.4);
+  box-shadow: 0 10px 26px var(--accent-a40);
 }
 .saveBtn:disabled {
   opacity: 0.6;
@@ -95,7 +101,7 @@
   letter-spacing: 0.3em;
   color: var(--accent);
   padding: 5px 12px;
-  border: 1px solid rgba(79, 195, 247, 0.35);
+  border: 1px solid var(--accent-a35);
   border-radius: 99px;
   background: var(--accent-soft);
 }
@@ -152,7 +158,7 @@
 
 .progress {
   flex: 1;
-  min-width: 220px;
+  min-width: 160px;
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -212,8 +218,8 @@
   padding: 10px 22px;
   font-size: 13px;
   font-weight: 700;
-  color: #04121f;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  background: var(--grad-accent);
   border: none;
   border-radius: var(--radius-sm);
 }
@@ -221,16 +227,23 @@
   filter: brightness(1.08);
 }
 
-/* ---------------- 导出捕获区 ---------------- */
+/* ---------------- 选择板（屏幕可见那份） ---------------- */
 .captureArea {
-  margin: 30px 0;
+  margin: 30px 0 0;
   padding: 26px 24px 20px;
   background:
-    radial-gradient(700px 320px at 8% 0%, rgba(79, 195, 247, 0.13), transparent 65%),
+    radial-gradient(700px 320px at 8% 0%, var(--accent-a12), transparent 65%),
     linear-gradient(160deg, var(--bg-soft), var(--panel));
   border: 1px solid var(--border);
   border-radius: 22px;
   box-shadow: var(--shadow);
+}
+
+.exportNote {
+  margin: 12px 0 30px;
+  font-size: 11.5px;
+  color: var(--text-mute);
+  text-align: center;
 }
 
 .captureHead {
@@ -269,15 +282,21 @@
   white-space: nowrap;
 }
 
-/* 选择板 */
 .board {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
 }
 
+/* 槽位外层：清除按钮与槽位按钮并列，避免「按钮里套按钮」 */
+.slotWrap {
+  position: relative;
+  display: flex;
+}
+
 .slot {
   position: relative;
+  width: 100%;
   aspect-ratio: 3 / 4;
   display: flex;
   flex-direction: column;
@@ -285,30 +304,29 @@
   justify-content: center;
   gap: 6px;
   padding: 10px;
-  background: rgba(11, 18, 32, 0.55);
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  background: var(--ink-a55);
   border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius);
   cursor: pointer;
   transition: 0.2s;
   overflow: hidden;
 }
-.slot:hover {
-  border-color: var(--accent);
-  background: rgba(79, 195, 247, 0.07);
-}
 .slotFilled {
   border-style: solid;
   border-color: var(--accent);
-  background: linear-gradient(170deg, rgba(79, 195, 247, 0.16), rgba(11, 18, 32, 0.7));
+  background: linear-gradient(170deg, var(--accent-a16), var(--ink-a70));
 }
 .slotOver {
   border-color: var(--accent-2);
-  background: rgba(124, 156, 255, 0.2);
+  background: var(--accent-2-a20);
   transform: scale(1.04);
 }
 .slotArmed {
   border-color: var(--ok);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.14);
+  box-shadow: 0 0 0 3px var(--ok-a14);
 }
 
 .slotIndex {
@@ -367,31 +385,48 @@
   line-height: 1;
 }
 
+/* 清除按钮：与槽位并列，命中区域通过 ::after 外扩到 ≥44px */
 .slotClear {
   position: absolute;
   top: 6px;
   right: 6px;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1;
   color: var(--text-dim);
-  background: rgba(11, 18, 32, 0.85);
+  background: var(--ink-a85);
   border: 1px solid var(--border-strong);
   border-radius: 50%;
   opacity: 0;
   transition: 0.16s;
 }
-.slot:hover .slotClear,
-.slot:focus-within .slotClear {
-  opacity: 1;
+.slotClear::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
 }
 .slotClear:hover {
   color: #fff;
   background: var(--danger);
   border-color: var(--danger);
+}
+
+/* 悬停能力只对精确指针开放，触屏上常显 */
+@media (hover: hover) {
+  .slot:hover {
+    border-color: var(--accent);
+    background: var(--accent-a07);
+  }
+  .slotFilled:hover {
+    background: linear-gradient(170deg, var(--accent-a16), var(--ink-a70));
+  }
+  .slotWrap:hover .slotClear,
+  .slotClear:focus-visible {
+    opacity: 1;
+  }
 }
 
 .captureFoot {
@@ -402,6 +437,62 @@
   letter-spacing: 0.08em;
   color: var(--text-mute);
   text-align: center;
+}
+
+/* ---------------- 离屏导出节点 ---------------- */
+/* 固定在视口外，画幅锁死 1200px；内部一律不使用断点覆盖，
+   因此同一份选择在任何设备上都会导出完全相同的图片。
+
+   scrollbar-gutter: stable 是这里的关键：
+   1fr 的解析结果取决于「可用宽度」，而桌面浏览器有滚动条、手机没有，
+   两者相差一个滚动条宽度，会改变列宽 → 槽位高 → 整图高度。
+   在该节点内部恒定预留滚动条空间，等价于桌面环境，出图因此确定。
+   只作用于导出节点，不影响页面其余任何布局。 */
+.exportStage {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  box-sizing: border-box;
+  width: 1200px;
+  scrollbar-gutter: stable;
+  pointer-events: none;
+  z-index: -1;
+}
+.exportStage * {
+  pointer-events: none;
+}
+
+/* ---- 导出几何锁定 ----
+   把会被移动端断点改动的属性在这里集中钉死。
+   之所以用 .exportStage 后代选择器而不是给元素本身加 :not(.xxxExport)：
+   .captureHead 这类是 .captureExport 的「后代」，
+   断点规则直接命中它，元素自身的 :not() 无法阻止。
+   后代选择器权重更高（0,2,0 > 0,1,0），可以稳定覆盖。
+   新增任何影响导出尺寸的响应式规则时，必须在这里同步锁定。 */
+.exportStage .captureExport {
+  padding: 26px 24px 20px;
+  border-radius: 22px;
+}
+.exportStage .captureHead {
+  padding-bottom: 20px;
+  margin-bottom: 22px;
+}
+.exportStage .captureTitle h2 {
+  /* 基础规则是 clamp(19px, 2.6vw, 27px)：vw 跟的是视口而非元素宽度，
+     手机上会算出更小字号并改变行高，因此这里固定为桌面值。 */
+  font-size: 27px;
+}
+.exportStage .slot {
+  padding: 10px;
+}
+
+/* 以下三个 *Export 类本身不声明样式，只作为「导出节点」的标记，
+   供上面各断点里的 :not(.xxxExport) 排除，避免被响应式规则改写尺寸。
+   .captureExport / .boardExport / .slotExport 均使用与屏幕版相同的基础规则。 */
+.captureExport,
+.boardExport,
+.slotExport {
+  min-width: 0;
 }
 
 /* ---------------- 学生名单 ---------------- */
@@ -420,7 +511,7 @@
   font-weight: 800;
   color: var(--accent);
   padding: 4px 10px;
-  border: 1px solid rgba(79, 195, 247, 0.35);
+  border: 1px solid var(--accent-a35);
   border-radius: 99px;
   background: var(--accent-soft);
 }
@@ -447,7 +538,7 @@
   gap: 7px;
   flex-wrap: wrap;
   flex: 1;
-  min-width: 260px;
+  min-width: 0;
 }
 
 .tab {
@@ -462,10 +553,7 @@
   border: 1px solid var(--border);
   border-radius: 99px;
   transition: 0.16s;
-}
-.tab:hover {
-  color: var(--text);
-  border-color: var(--border-strong);
+  white-space: nowrap;
 }
 .tab i {
   font-style: normal;
@@ -473,12 +561,22 @@
   color: var(--text-mute);
 }
 .tabActive {
-  color: #04121f;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  background: var(--grad-accent);
   border-color: transparent;
 }
 .tabActive i {
   color: rgba(4, 18, 31, 0.6);
+}
+
+@media (hover: hover) {
+  .tab:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .tabActive:hover {
+    color: var(--on-accent);
+  }
 }
 
 .searchBox {
@@ -486,7 +584,8 @@
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  min-width: 260px;
+  width: 260px;
+  max-width: 100%;
   color: var(--text-mute);
   background: var(--panel);
   border: 1px solid var(--border);
@@ -508,7 +607,11 @@
   outline: none;
 }
 .clearQuery {
-  font-size: 16px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 17px;
   line-height: 1;
   color: var(--text-mute);
   background: transparent;
@@ -526,8 +629,8 @@
   padding: 10px 14px;
   font-size: 13px;
   color: var(--text);
-  background: rgba(74, 222, 128, 0.1);
-  border: 1px solid rgba(74, 222, 128, 0.4);
+  background: var(--ok-a10);
+  border: 1px solid var(--ok-a40);
   border-radius: var(--radius-sm);
 }
 .pendingBar img {
@@ -541,7 +644,7 @@
 }
 .pendingBar button {
   margin-left: auto;
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 12px;
   color: var(--text-dim);
   background: transparent;
@@ -552,11 +655,18 @@
   color: var(--text);
 }
 
-/* 学生网格 */
-.grid {
+/* 学生卡片网格：名单区与弹窗区列数策略不同，故分为两个类 */
+.gridRoster {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 11px;
+}
+.gridModal {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+  gap: 11px;
+  overflow-y: auto;
+  padding-right: 5px;
 }
 
 .card {
@@ -568,17 +678,9 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  cursor: grab;
   transition: 0.16s;
   user-select: none;
-}
-.card:hover {
-  border-color: var(--accent);
-  background: var(--panel-2);
-  transform: translateY(-2px);
-}
-.card:active {
-  cursor: grabbing;
+  touch-action: manipulation;
 }
 .cardDragging {
   opacity: 0.45;
@@ -586,10 +688,24 @@
 }
 .cardPending {
   border-color: var(--ok);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.16);
+  box-shadow: 0 0 0 3px var(--ok-a16);
 }
 .cardPlaced {
-  border-color: rgba(79, 195, 247, 0.5);
+  border-color: var(--accent-a50);
+}
+
+@media (hover: hover) {
+  .card {
+    cursor: grab;
+  }
+  .card:active {
+    cursor: grabbing;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    background: var(--panel-2);
+    transform: translateY(-2px);
+  }
 }
 
 .cardImg {
@@ -646,6 +762,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
   margin: 0 0 14px;
   font-size: 12.5px;
   color: var(--text-mute);
@@ -655,7 +772,7 @@
 }
 .resultHint button {
   margin-left: 8px;
-  padding: 4px 11px;
+  padding: 6px 12px;
   font-size: 11.5px;
   color: var(--text-dim);
   background: transparent;
@@ -672,8 +789,11 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  display: grid;
-  place-items: center;
+  /* 用 flex 居中：grid + place-items 会让子项按 max-content 定尺，
+     导致 .modal 的 max-width:100% 失效、在窄屏上横向溢出 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
   background: rgba(4, 9, 18, 0.74);
   backdrop-filter: blur(6px);
@@ -681,13 +801,14 @@
 }
 
 .modal {
-  width: min(940px, 100%);
+  width: 940px;
+  max-width: 100%;
   max-height: 86vh;
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 20px;
-  background: linear-gradient(165deg, var(--bg-soft), var(--panel));
+  background: var(--grad-panel);
   border: 1px solid var(--border-strong);
   border-radius: 20px;
   box-shadow: var(--shadow);
@@ -716,8 +837,9 @@
 }
 .modalClose {
   margin-left: auto;
-  width: 32px;
-  height: 32px;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
   font-size: 20px;
   line-height: 1;
   color: var(--text-dim);
@@ -733,18 +855,17 @@
 .modalTabs {
   display: flex;
   gap: 6px;
+  flex-wrap: nowrap;
   overflow-x: auto;
   padding-bottom: 3px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.modalTabs::-webkit-scrollbar {
+  display: none;
 }
 .modalTabs .tab {
-  white-space: nowrap;
   flex: 0 0 auto;
-}
-
-.gridModal {
-  overflow-y: auto;
-  padding-right: 5px;
-  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
 }
 
 .modalFoot {
@@ -759,18 +880,37 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 34px;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
   z-index: 200;
   transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
   padding: 11px 22px;
   font-size: 13px;
   font-weight: 600;
+  text-align: center;
   color: var(--text);
   background: rgba(22, 35, 58, 0.97);
   border: 1px solid var(--accent);
   border-radius: 99px;
   box-shadow: var(--shadow);
   animation: pop 0.2s ease;
+}
+
+/* 仅当移动端保存链路降级时才出现 */
+.saveHint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 200;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
 }
 
 .siteFoot {
@@ -800,19 +940,38 @@
   }
 }
 
-/* ---------------- 响应式 ---------------- */
+/* ============================================================
+   响应式
+   注意：所有规则都带 :not(.xxxExport)，确保离屏导出节点不被覆盖。
+   ============================================================ */
+
+/* 平板：选择板 4 列，名单交给 auto-fill */
 @media (max-width: 1024px) {
-  .board {
+  .board:not(.boardExport) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 760px) {
+/* 大屏手机 / 小平板：选择板 3 列；名单交给 auto-fill，
+   避免写死 3 列导致 768px 下卡片反而比 1024px 更宽 */
+@media (max-width: 768px) {
   .page {
-    padding: 0 14px 60px;
+    padding: 0 16px 60px;
   }
-  .topbar {
+  .board:not(.boardExport) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .cardImg {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* 手机 */
+@media (max-width: 760px) {  .topbar {
     gap: 10px;
+    padding: 10px 0;
   }
   .brand {
     display: none;
@@ -820,13 +979,15 @@
   .saveBtn {
     margin-left: auto;
   }
-  .board {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+
+  .mission {
+    padding: 22px 0 20px;
   }
-  .captureArea {
-    padding: 18px 14px 16px;
-    border-radius: 18px;
+  .missionHint {
+    margin-bottom: 20px;
+  }
+  .missionBar {
+    gap: 14px;
   }
   .teacherField {
     width: 100%;
@@ -834,22 +995,90 @@
   .teacherField input {
     width: 100%;
   }
-  .grid {
+
+  .captureArea:not(.captureExport) {
+    padding: 18px 14px 16px;
+    border-radius: 18px;
+  }
+  .board:not(.boardExport) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .gridRoster {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .searchBox {
-    min-width: 100%;
+
+  .captureHead {
+    padding-bottom: 14px;
+    margin-bottom: 16px;
   }
+  /* 学院标签改为单行横向滚动，避免堆成 4 行占掉 240px 高度 */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs .tab {
+    flex: 0 0 auto;
+  }
+
+  .searchBox {
+    width: 100%;
+  }
+
+  /* 选中反馈固定在底部：否则它渲染在名单上方（视口外 2000+ px 处），用户看不到 */
+  .pendingBar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 80;
+    margin: 0;
+    box-shadow: var(--shadow);
+  }
+
   .slotClear {
     opacity: 1;
+    width: 36px;
+    height: 36px;
+  }
+
+  .modalMask {
+    padding: 12px;
+  }
+  .modal {
+    padding: 14px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  .modalHead img {
+    width: 36px;
+    height: 36px;
   }
 }
 
-@media (max-width: 420px) {
-  .board {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* 窄屏：进一步收紧卡片，保证 2 列不溢出 */
+@media (max-width: 375px) {
+  .page {
+    padding: 0 12px 60px;
   }
-  .grid {
-    grid-template-columns: 1fr;
+  .gridRoster {
+    gap: 8px;
+  }
+  .card {
+    gap: 8px;
+    padding: 7px 8px;
+  }
+  .cardImg {
+    width: 34px;
+    height: 34px;
+  }
+  .cardInfo b {
+    font-size: 12.5px;
   }
 }

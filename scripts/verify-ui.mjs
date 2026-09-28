@@ -37,7 +37,8 @@ await page.screenshot({ path: path.join(outDir, '02-favorite-empty.png'), fullPa
 console.log('✓ 最爱学生页（空状态）截图');
 
 // 滚动到选择板并截取
-const board = page.locator('[class*="captureArea"]');
+// 屏幕版的选择板：用「含屏幕槽位」定位，避免命中离屏的导出节点
+const board = page.locator('div[class*="captureArea"]:has([data-live-slot])');
 await board.screenshot({ path: path.join(outDir, '03-board-empty.png') });
 console.log('✓ 选择板空状态截图');
 
@@ -48,7 +49,7 @@ console.log('✓ 填入老师名字');
 // ---------- 4. 交互：用弹窗选择 3 个学院 ----------
 const pickSlots = ['abydos', 'gehenna', 'trinity'];
 for (const id of pickSlots) {
-  await page.locator(`[data-slot="${id}"]`).click();
+  await page.locator(`[data-live-slot="${id}"]`).click();
   await page.waitForTimeout(250);
   const modal = page.locator('[role="dialog"]');
   await modal.waitFor({ state: 'visible' });
@@ -72,7 +73,7 @@ const dragSrc = await page.evaluate(() => {
 });
 const dragResult = await page.evaluate(async ({ id }) => {
   const card = document.querySelector(`[data-student-id="${id}"]`);
-  const slot = document.querySelector('[data-slot="millennium"]');
+  const slot = document.querySelector('[data-live-slot="millennium"]');
   const dt = new DataTransfer();
   const fire = (el, type) =>
     el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }));
@@ -91,7 +92,7 @@ console.log(
 // ---------- 6. 搜索过滤（关键：先切到某个学院标签，再搜索，必须跨学院生效） ----------
 const input = page.getByPlaceholder('搜索学生名 / 韩文名');
 // 通过弹窗把标签停在「三一」
-await page.locator('[data-slot="trinity"]').click();
+await page.locator('[data-live-slot="trinity"]').click();
 await page.waitForTimeout(300);
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);

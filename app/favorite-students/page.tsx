@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { studentsData, BASE_PATH } from '@/lib/students-data';
 import type { Academy, Student } from '@/types/students';
+import CaptureBoard, { type Slots } from './CaptureBoard';
 import styles from './favorite-students.module.css';
 
 const { academies, students, stats } = studentsData;
@@ -13,12 +14,13 @@ const studentsByAcademy = new Map<string, Student[]>();
 for (const a of academies) studentsByAcademy.set(a.id, []);
 for (const s of students) studentsByAcademy.get(s.academyId)?.push(s);
 
-type Slots = Record<string, Student | null>;
-
 const emptySlots = (): Slots => Object.fromEntries(academies.map((a) => [a.id, null]));
 
 /** 归一化搜索：忽略大小写、空白、中英文括号差异 */
 const norm = (v: string) => v.toLowerCase().replace(/[\s()（）·・]/g, '');
+
+/** 学院名查表，避免每次渲染都遍历 */
+const academyShort = new Map(academies.map((a) => [a.id, a.short]));
 
 /** 把一张图片转成自包含的 data URL（不依赖任何路径解析） */
 const toDataUrl = (src: string): Promise<string> =>
@@ -34,6 +36,23 @@ const toDataUrl = (src: string): Promise<string> =>
         })
     );
 
+/**
+ * dataURL → Blob（供 Web Share API 使用）。
+ *
+ * 不要用 fetch(dataUrl)：Chrome 对 2MB 级的 base64 data URL 走网络栈会严重退化
+ * （实测单次耗时 30 秒）。直接做 base64 解码是毫秒级的。
+ */
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const comma = dataUrl.indexOf(',');
+  const meta = dataUrl.slice(0, comma);
+  const body = dataUrl.slice(comma + 1);
+  const mime = /:(.*?)[;,]/.exec(meta)?.[1] ?? 'application/octet-stream';
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+};
+
 export default function FavoriteStudentsPage() {
   const [slots, setSlots] = useState<Slots>(emptySlots);
   const [teacher, setTeacher] = useState('');
@@ -45,10 +64,13 @@ export default function FavoriteStudentsPage() {
   const [dragOverAcademy, setDragOverAcademy] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
+  /** 是否具备精确指针 + 悬停能力：决定启用拖拽、悬停显隐与文案 */
+  const [canHover, setCanHover] = useState(false);
 
-  const captureRef = useRef<HTMLDivElement>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const toastTimer = useRef<number | null>(null);
 
   const selectedCount = useMemo(() => Object.values(slots).filter(Boolean).length, [slots]);
   const total = academies.length;
@@ -62,9 +84,30 @@ export default function FavoriteStudentsPage() {
       ? trimmedName
       : `${trimmedName} 老师`;
 
+  // 指针能力探测：触屏设备走「点选」路径，不启用原生拖拽
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const apply = () => setCanHover(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  // 卸载时清掉未触发的提示定时器，避免对已卸载组件 setState
+  useEffect(
+    () => () => {
+      if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+    },
+    []
+  );
+
   const showToast = useCallback((msg: string) => {
+    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
     setToast(msg);
-    window.setTimeout(() => setToast((t) => (t === msg ? null : t)), 2200);
+    toastTimer.current = window.setTimeout(() => {
+      setToast((t) => (t === msg ? null : t));
+      toastTimer.current = null;
+    }, 2200);
   }, []);
 
   // ---------- 选择逻辑 ----------
@@ -90,12 +133,20 @@ export default function FavoriteStudentsPage() {
     setSlots(emptySlots());
     setTeacher('');
     setPendingStudent(null);
+    setTab('all');
+    setQuery('');
     showToast('已重置全部选择');
   }, [showToast]);
 
-  // ---------- 拖拽（桌面） ----------
-  // 说明：不完全依赖 dataTransfer（部分环境/自动化下取不到值），
-  // 用 draggingId 作为兜底，两条路径都能完成投放。
+  // ---------- 选择弹窗 ----------
+  const openPicker = useCallback((academy: Academy) => {
+    setPickerAcademy(academy);
+    setQuery('');
+    setTab(academy.id);
+  }, []);
+
+  // ---------- 拖拽（仅桌面） ----------
+  // 不完全依赖 dataTransfer（部分环境取不到值），用 draggingId 兜底。
   const onCardDragStart = (e: React.DragEvent, student: Student) => {
     e.dataTransfer.setData('text/plain', student.id);
     e.dataTransfer.effectAllowed = 'move';
@@ -116,6 +167,16 @@ export default function FavoriteStudentsPage() {
     setDragOverAcademy(null);
   };
 
+  const onSlotDragOver = (e: React.DragEvent, academyId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverAcademy(academyId);
+  };
+
+  const onSlotDragLeave = (academyId: string) => {
+    setDragOverAcademy((cur) => (cur === academyId ? null : cur));
+  };
+
   // ---------- 移动端：先点学生、再点学院格 ----------
   const onCardClick = (student: Student) => {
     if (pendingStudent?.id === student.id) {
@@ -123,7 +184,7 @@ export default function FavoriteStudentsPage() {
       return;
     }
     setPendingStudent(student);
-    if (window.matchMedia('(hover: none)').matches) {
+    if (!canHover) {
       showToast(`已选中「${student.name}」，再点学院格放入`);
     }
   };
@@ -136,13 +197,6 @@ export default function FavoriteStudentsPage() {
     const academy = academies.find((a) => a.id === academyId);
     if (academy) openPicker(academy);
   };
-
-  // ---------- 选择弹窗 ----------
-  const openPicker = useCallback((academy: Academy) => {
-    setPickerAcademy(academy);
-    setQuery('');
-    setTab(academy.id);
-  }, []);
 
   useEffect(() => {
     if (!pickerAcademy) return;
@@ -181,10 +235,17 @@ export default function FavoriteStudentsPage() {
   }, [tab, query]);
 
   // ---------- 导出图片 ----------
+  /**
+   * 生成图片并尽力触发保存。
+   *
+   * 截图目标是**离屏的固定 1200px 节点**（exportRef），不是屏幕上那份，
+   * 因此同一份选择在手机与电脑上导出的图片完全一致。
+   */
   const exportImage = useCallback(async () => {
-    const node = captureRef.current;
+    const node = exportRef.current;
     if (!node) return;
     setExporting(true);
+    setSaveHint(null);
     showToast('正在生成图片…');
 
     // 导出会踩两个坑，这里一并规避：
@@ -194,9 +255,8 @@ export default function FavoriteStudentsPage() {
     //    前缀，于是去请求 https://<用户>.github.io/assets/... 拿到 404 而卡死。
     //    → 导出前把图片内联成 data URL，自包含、不涉及任何路径解析。
     //
-    // 2) 直接把绝对 URL 写回 DOM 会与 React 的渲染相互覆盖，曾经出现导出后
-    //    src 被还原成无前缀相对路径的情况。
-    //    → 因此不再修改 DOM 节点的 src，只替换 html-to-image 内部发起请求的地址。
+    // 2) 直接把绝对 URL 写回 DOM 会与 React 的渲染相互覆盖。
+    //    → 因此只替换 html-to-image 内部发起请求的地址，不改动节点 src。
     const imgs = Array.from(node.querySelectorAll('img'));
     const originals = imgs.map((img) => img.getAttribute('src'));
     const nativeFetch = window.fetch;
@@ -230,13 +290,66 @@ export default function FavoriteStudentsPage() {
         width: node.offsetWidth,
         height: node.offsetHeight,
       });
-      const link = document.createElement('a');
+
       const stamp = new Date().toISOString().slice(0, 10);
-      const safeName = teacher.trim() ? `-${teacher.trim().replace(/[\\/:*?"<>|]/g, '')}` : '';
-      link.download = `学院最爱学生-${stamp}${safeName}.png`;
+      const safeName = trimmedName ? `-${trimmedName.replace(/[\\/:*?"<>|]/g, '')}` : '';
+      const filename = `学院最爱学生-${stamp}${safeName}.png`;
+
+      // 保存链路：先试系统分享（移动端体验最好），否则走下载。
+      // link.click() 是「发出即忘」，无法回传是否被拦截，因此下载不再往下兜底；
+      // 若用户反馈没保存成功，saveHint 会提示可用新标签打开。
+      // 保存链路：优先系统分享（移动端体验最好），否则走下载。
+      //
+      // 分享必须限时：部分桌面浏览器 canShare 返回 true，但 share() 会静默挂起
+      // （实测 Chrome/Windows 挂满 30 秒才落回），用户会以为卡死。
+      // 因此超时就放弃分享、直接下载；同时把可能仍在挂起的 promise 吞掉，
+      // 避免它稍后 reject 变成未处理拒绝。
+      if (canHover) {
+        setSaveHint('若未自动保存，可右键图片另存为。');
+      }
+      let sharePending: Promise<void> | null = null;
+      try {
+        const blob = dataUrlToBlob(dataUrl);
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare?.({ files: [file] })) {
+          const sharePromise = navigator
+            .share({ files: [file], title: '学院最爱学生' })
+            .then(() => undefined);
+          sharePromise.catch(() => undefined);
+          const raced = await Promise.race([
+            sharePromise,
+            new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), 1200)),
+          ]);
+          if (raced !== 'timeout') {
+            showToast('已调起分享');
+            return;
+          }
+          sharePending = sharePromise;
+        }
+      } catch {
+        // 不支持或用户取消：落到下载
+      }
+
+      const link = document.createElement('a');
+      link.download = filename;
       link.href = dataUrl;
+      link.rel = 'noopener';
       link.click();
+
+      // 移动端浏览器可能忽略 download 属性，补一个可在新标签打开的入口
+      if (!canHover) {
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.write(
+            `<title>${filename}</title><body style="margin:0;background:#0b1220;display:grid;place-items:center;min-height:100vh"><img src="${dataUrl}" style="max-width:100%" alt="学院最爱学生"></body>`
+          );
+          win.document.close();
+          setSaveHint('若未自动保存，可在此新标签内长按图片保存。');
+        }
+      }
+
       showToast('图片已保存');
+      if (sharePending) sharePending.catch(() => undefined);
     } catch {
       showToast('生成图片失败，请重试');
     } finally {
@@ -246,7 +359,16 @@ export default function FavoriteStudentsPage() {
       window.fetch = nativeFetch;
       setExporting(false);
     }
-  }, [showToast, teacher]);
+  }, [showToast, trimmedName, canHover]);
+
+  const boardProps = {
+    academies,
+    slots,
+    ownerLabel,
+    selectedCount,
+    total,
+    studentCount: students.length,
+  };
 
   return (
     <main className={styles.page}>
@@ -281,7 +403,9 @@ export default function FavoriteStudentsPage() {
           你最爱的那一名
         </h1>
         <p className={styles.missionHint}>
-          桌面端可以把学生卡直接拖到学院格里；手机上先点学生，再点想要放入的学院格即可。
+          {canHover
+            ? '把学生卡直接拖到学院格里；也可以点学院格打开选择列表。'
+            : '先点学生，再点想要放入的学院格即可。'}
         </p>
 
         <div className={styles.missionBar}>
@@ -309,87 +433,24 @@ export default function FavoriteStudentsPage() {
         </div>
       </section>
 
-      {/* ============ 导出捕获区 ============ */}
-      <div ref={captureRef} className={styles.captureArea}>
-        <div className={styles.captureHead}>
-          <div className={styles.captureTitle}>
-            <span className={styles.captureKicker}>KIVOTOS PICK</span>
-            <h2>
-              {ownerLabel}的
-              <em>学院最爱学生</em>
-            </h2>
-          </div>
-          <div className={styles.captureCount}>
-            {selectedCount}/{total}
-          </div>
-        </div>
+      {/* ============ 屏幕上的选择板（跟随设备自适应） ============ */}
+      <CaptureBoard
+        {...boardProps}
+        variant="live"
+        pendingActive={!!pendingStudent}
+        dragOverAcademy={dragOverAcademy}
+        onSlotClick={onSlotClick}
+        onSlotClear={clearSlot}
+        onSlotDrop={onSlotDrop}
+        onSlotDragOver={onSlotDragOver}
+        onSlotDragLeave={onSlotDragLeave}
+      />
+      <p className={styles.exportNote}>导出图片统一按桌面版式生成，手机与电脑出图一致。</p>
 
-        <div className={styles.board}>
-          {academies.map((a, i) => {
-            const picked = slots[a.id];
-            const isOver = dragOverAcademy === a.id;
-            return (
-              <div
-                key={a.id}
-                className={[
-                  styles.slot,
-                  picked ? styles.slotFilled : '',
-                  isOver ? styles.slotOver : '',
-                  pendingStudent ? styles.slotArmed : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                data-slot={a.id}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  setDragOverAcademy(a.id);
-                }}
-                onDragLeave={() => setDragOverAcademy((cur) => (cur === a.id ? null : cur))}
-                onDrop={(e) => onSlotDrop(e, a.id)}
-                onClick={() => onSlotClick(a.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onSlotClick(a.id);
-                  }
-                }}
-              >
-                <div className={styles.slotIndex}>{String(i + 1).padStart(2, '0')}</div>
-
-                {picked ? (
-                  <>
-                    <img className={styles.slotFace} src={picked.icon} alt={picked.name} draggable={false} />
-                    <div className={styles.slotName}>{picked.name}</div>
-                    <div className={styles.slotAcademy}>{a.short}</div>
-                    <button
-                      className={styles.slotClear}
-                      aria-label={`清空${a.short}的选择`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        clearSlot(a.id);
-                      }}
-                    >
-                      ×
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <img className={styles.slotEmblem} src={a.emblem} alt="" draggable={false} />
-                    <div className={styles.slotPlaceholder}>未选择</div>
-                    <div className={styles.slotAcademy}>{a.short}</div>
-                    <div className={styles.slotPlus}>+</div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className={styles.captureFoot}>
-          共 {students.length} 名学生 · 非官方同人镜像 · 素材版权归 Nexon 所有
+      {/* ============ 离屏导出节点（固定 1200px，仅用于截图） ============ */}
+      <div className={styles.exportStage} data-export-stage aria-hidden="true">
+        <div ref={exportRef}>
+          <CaptureBoard {...boardProps} variant="export" />
         </div>
       </div>
 
@@ -443,7 +504,7 @@ export default function FavoriteStudentsPage() {
           <div className={styles.pendingBar}>
             <img src={pendingStudent.icon} alt="" />
             <span>
-              已选中「<b>{pendingStudent.name}</b>」——点上方任意学院格放入
+              已选中「<b>{pendingStudent.name}</b>」——点上方学院格放入
             </span>
             <button onClick={() => setPendingStudent(null)}>取消</button>
           </div>
@@ -456,7 +517,7 @@ export default function FavoriteStudentsPage() {
           </p>
         )}
 
-        <div className={styles.grid}>
+        <div className={styles.gridRoster}>
           {listedStudents.map((s) => {
             const isPending = pendingStudent?.id === s.id;
             const placedIn = Object.entries(slots).find(([, v]) => v?.id === s.id)?.[0];
@@ -472,9 +533,9 @@ export default function FavoriteStudentsPage() {
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                draggable
-                onDragStart={(e) => onCardDragStart(e, s)}
-                onDragEnd={onCardDragEnd}
+                draggable={canHover}
+                onDragStart={canHover ? (e) => onCardDragStart(e, s) : undefined}
+                onDragEnd={canHover ? onCardDragEnd : undefined}
                 onClick={() => onCardClick(s)}
                 title={`${s.name}${s.aliases.length ? `（${s.aliases[0]}）` : ''}`}
               >
@@ -483,7 +544,7 @@ export default function FavoriteStudentsPage() {
                 </span>
                 <span className={styles.cardInfo}>
                   <b>{s.name}</b>
-                  <small>{academies.find((a) => a.id === s.academyId)?.short}</small>
+                  <small>{academyShort.get(s.academyId)}</small>
                 </span>
                 {placedIn && <span className={styles.cardCheck}>✓</span>}
               </div>
@@ -500,7 +561,6 @@ export default function FavoriteStudentsPage() {
       {pickerAcademy && (
         <div className={styles.modalMask} onClick={() => setPickerAcademy(null)}>
           <div
-            ref={pickerRef}
             className={styles.modal}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
@@ -556,7 +616,7 @@ export default function FavoriteStudentsPage() {
               </div>
             )}
 
-            <div className={`${styles.grid} ${styles.gridModal}`}>
+            <div className={styles.gridModal}>
               {pickerStudents.map((s) => (
                 <div
                   key={s.id}
@@ -568,7 +628,7 @@ export default function FavoriteStudentsPage() {
                   </span>
                   <span className={styles.cardInfo}>
                     <b>{s.name}</b>
-                    <small>{academies.find((a) => a.id === s.academyId)?.short}</small>
+                    <small>{academyShort.get(s.academyId)}</small>
                   </span>
                 </div>
               ))}
@@ -595,6 +655,7 @@ export default function FavoriteStudentsPage() {
       )}
 
       {toast && <div className={styles.toast}>{toast}</div>}
+      {saveHint && <div className={styles.saveHint}>{saveHint}</div>}
 
       <footer className={styles.siteFoot}>
         <p>

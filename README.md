@@ -27,11 +27,30 @@
 | 学生总列表：学院标签筛选 + 搜索 | ✅ |
 | 老师名字输入 + 已选进度（0/15） | ✅ |
 | 一键重置 | ✅ |
-| 导出 PNG（含标题、进度、学生头像） | ✅ 2 倍像素密度 |
-| 响应式（桌面 / 平板 / 手机） | ✅ |
+| 导出 PNG（含标题、进度、学生头像） | ✅ 2 倍像素密度，**手机与电脑出图完全一致** |
+| 响应式（桌面 / 平板 / 手机） | ✅ 320px 起无横向溢出 |
 | 首页（原站有 `/top-nine`、`/bingo`） | ⚠️ 本期只做 `/favorite-students` |
 
 原站是韩文界面，本复刻为**简体中文**，学生名使用 SchaleDB 官方简中译名。
+
+### 导出一致性（重要设计约定）
+
+**同一份选择，无论在手机还是电脑上点「保存图片」，生成的 PNG 逐像素完全相同**（实测差异 0 像素）。
+
+实现方式：`CaptureBoard` 组件渲染两份——
+
+- 屏幕上一份跟随设备断点（手机上选择板 2 列，观看更舒适）；
+- 离屏一份（`.exportStage`，固定 1200px 宽）专供截图，尺寸被 CSS 锁死。
+
+截图目标是离屏那份，因此出图不随设备变化。需要注意的坑：
+
+1. 响应式断点依据**视口**宽度而非元素宽度，所以所有断点规则都要带
+   `:not(.xxxExport)`，且后代元素（如 `.captureHead`）需用
+   `.exportStage .xxx` 提高权重覆盖，详见 CSS 里的「导出几何锁定」块。
+2. 不要用 `vw` 单位（如 `clamp(19px, 2.6vw, 27px)`）——它跟的是视口，
+   手机上会算出更小字号并改变行高；导出节点内必须用固定值。
+3. `1fr` 的解析依赖可用宽度，而桌面有滚动条、手机没有，会差一个滚动条宽度；
+   导出节点用 `scrollbar-gutter: stable` 恒定预留，出图因此确定。
 
 ---
 
@@ -48,7 +67,8 @@ app/
   page.tsx                            首页（三个模式入口）
   favorite-students/
     page.tsx                          主页面（全部交互逻辑）
-    favorite-students.module.css       页面样式
+    CaptureBoard.tsx                  选择板（live / export 双形态）
+    favorite-students.module.css       页面样式（含导出几何锁定）
 data/
   students.json                       构建时内联进页面的学生数据
 types/students.ts                     类型定义
@@ -102,15 +122,13 @@ npm run verify           # 截图 + 交互测试 + 导出测试
 `npm run verify` 会用本机 Chrome 跑一遍真实交互，并把截图写到 `scripts/.shots/`。
 它验证：拖拽投放、同一学生换学院时自动从原格移除、标签页下的跨学院搜索、韩文别名搜索、导出图片。
 
-另外两个针对部署场景的验证：
+另外三个针对部署与移动端的验证：
 
 ```bash
-# 校验带 basePath 的产物：模拟 Pages 把仓库根目录映射到 /<仓库名>/ 的规则，
-# 逐条检查产物内 228 个引用是否都能命中（本地与子路径两种模式都可用）
-npm run build && node scripts/verify-basepath.mjs /kivotos-pick-cn 4180
-
-# 线上验收：直接请求已部署的站点，检查资源、渲染、交互与导出
-node scripts/verify-live.mjs
+npm run verify:mobile   # 320–768px 无溢出、弹窗不裁切、触屏交互、移动端导出
+npm run verify:parity   # 桌面与移动各导出一次并逐像素比对（必须 0 差异）
+npm run verify:pages    # 子路径产物校验，用法：npm run verify:pages /kivotos-pick-cn 4180
+node scripts/verify-live.mjs   # 线上验收：资源 + 渲染 + 交互 + 导出
 ```
 
 ### 其他脚本
@@ -121,6 +139,8 @@ node scripts/verify-live.mjs
 | `scripts/serve-out.mjs` | 预览 `out/` 的极简静态服务器（根路径） |
 | `scripts/serve-basepath.mjs` | 模拟子路径部署的预览服务器，如 `/kivotos-pick-cn/` |
 | `scripts/verify-basepath.mjs` | 校验子路径产物里所有引用是否可命中 |
+| `scripts/verify-mobile.mjs` | 移动端适配验收 |
+| `scripts/verify-export-parity.mjs` | 跨设备导出一致性（像素级） |
 | `scripts/verify-live.mjs` | 线上验收（资源 + 渲染 + 交互 + 导出） |
 | `scripts/resize-image.mjs` | 缩放/裁剪截图，便于查看超长页面 |
 

@@ -74,10 +74,16 @@ await p.evaluate(async () => {
 let imgs = { total: 0, loaded: 0 };
 for (let i = 0; i < 30; i++) {
   await p.waitForTimeout(1000);
-  imgs = await p.evaluate(() => ({
-    total: document.querySelectorAll('img').length,
-    loaded: [...document.querySelectorAll('img')].filter((i) => i.naturalWidth > 0).length,
-  }));
+  imgs = await p.evaluate(() => {
+    // 只统计屏幕上的图片：离屏导出节点里还有一整套副本，会把计数翻倍
+    const list = [...document.querySelectorAll('img')].filter(
+      (i) => !i.closest('[data-export-stage]')
+    );
+    return {
+      total: list.length,
+      loaded: list.filter((i) => i.naturalWidth > 0).length,
+    };
+  });
   if (imgs.loaded === imgs.total) break;
 }
 imgs.loaded === imgs.total
@@ -86,7 +92,7 @@ imgs.loaded === imgs.total
 
 const structure = await p.evaluate(() => ({
   cards: document.querySelectorAll('[data-student-id]').length,
-  slots: document.querySelectorAll('[data-slot]').length,
+  slots: document.querySelectorAll('[data-live-slot]').length,
   h1: document.querySelector('h1')?.textContent,
 }));
 structure.cards === 200 && structure.slots === 15
@@ -99,7 +105,7 @@ await p.waitForTimeout(300);
 ok('填入老师名字');
 
 // 2.3 弹窗选人
-await p.locator('[data-slot="abydos"]').click();
+await p.locator('[data-live-slot="abydos"]').click();
 await p.waitForTimeout(500);
 await p.locator('[role="dialog"] [class*="cardImg"]').first().click();
 await p.waitForTimeout(500);
@@ -110,7 +116,7 @@ prog === '1' ? ok('弹窗选择生效，进度 1/15') : bad(`进度异常：${pr
 const dragId = await p.evaluate(() => document.querySelector('[data-student-id]')?.getAttribute('data-student-id'));
 const dragOk = await p.evaluate(async (id) => {
   const card = document.querySelector(`[data-student-id="${id}"]`);
-  const slot = document.querySelector('[data-slot="gehenna"]');
+  const slot = document.querySelector('[data-live-slot="gehenna"]');
   const dt = new DataTransfer();
   const fire = (el, t) => el.dispatchEvent(new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt }));
   fire(card, 'dragstart');
@@ -156,7 +162,7 @@ req404.length === 0 ? ok('导出期间无 404 请求') : bad(`导出期间有 ${
 
 // 2.7 导出后页面是否恢复
 const afterAttr = await p.evaluate(
-  () => document.querySelector('[class*="captureArea"] img')?.getAttribute('src')
+  () => document.querySelector('[data-live-slot] img')?.getAttribute('src')
 );
 afterAttr?.startsWith('/kivotos-pick-cn/')
   ? ok(`导出后 src 正确还原: ${afterAttr}`)

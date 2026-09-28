@@ -14,6 +14,31 @@
   --accent-soft: rgba(79, 195, 247, 0.14);
   --danger: #ff6b81;
   --ok: #4ade80;
+
+  /* 语义化透明度变体：避免样式里散落重复的 rgba 字面量 */
+  --accent-a07: rgba(79, 195, 247, 0.07);
+  --accent-a12: rgba(79, 195, 247, 0.12);
+  --accent-a16: rgba(79, 195, 247, 0.16);
+  --accent-a28: rgba(79, 195, 247, 0.28);
+  --accent-a35: rgba(79, 195, 247, 0.35);
+  --accent-a40: rgba(79, 195, 247, 0.4);
+  --accent-a50: rgba(79, 195, 247, 0.5);
+  --accent-2-a20: rgba(124, 156, 255, 0.2);
+  --ink: 11, 18, 32;
+  --ink-a55: rgba(11, 18, 32, 0.55);
+  --ink-a70: rgba(11, 18, 32, 0.7);
+  --ink-a72: rgba(11, 18, 32, 0.72);
+  --ink-a85: rgba(11, 18, 32, 0.85);
+  --ink-a94: rgba(11, 18, 32, 0.94);
+  --ok-a10: rgba(74, 222, 128, 0.1);
+  --ok-a14: rgba(74, 222, 128, 0.14);
+  --ok-a16: rgba(74, 222, 128, 0.16);
+  --ok-a40: rgba(74, 222, 128, 0.4);
+  --grad-accent: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --grad-panel: linear-gradient(165deg, var(--bg-soft), var(--panel));
+  --on-accent: #04121f;
+  --shadow-pop: 0 14px 34px rgba(0, 0, 0, 0.32);
+
   --radius: 14px;
   --radius-sm: 10px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -39,21 +64,42 @@ body {
   color: var(--text);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
   min-height: 100vh;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  /* 消除移动端 300ms 双击缩放延迟 */
+  touch-action: manipulation;
 }
 
 input {
   font-family: inherit;
 }
 
+/* 键盘可见焦点：鼠标点击不显示，Tab 导航才显示 */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 ::selection {
   background: var(--accent);
-  color: #06121f;
+  color: var(--on-accent);
+}
+
+/* 尊重系统的「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* 滚动条 */
