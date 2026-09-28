@@ -61,7 +61,7 @@ p.on('pageerror', (e) => consoleErrors.push('pageerror: ' + e.message));
 await p.goto(`${base}/favorite-students/`, { waitUntil: 'networkidle', timeout: 60000 });
 await p.waitForTimeout(800);
 
-// 2.1 滚动看完整列表（懒加载）
+// 2.1 滚动看完整列表（懒加载），滚动后轮询等待图片解码稳定
 await p.evaluate(async () => {
   for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight) {
     window.scrollTo(0, y);
@@ -69,13 +69,20 @@ await p.evaluate(async () => {
   }
   window.scrollTo(0, 0);
 });
-await p.waitForTimeout(2500);
 
-const imgs = await p.evaluate(() => ({
-  total: document.querySelectorAll('img').length,
-  loaded: [...document.querySelectorAll('img')].filter((i) => i.naturalWidth > 0).length,
-}));
-imgs.loaded === imgs.total ? ok(`图片 ${imgs.loaded}/${imgs.total} 全部解码`) : bad(`图片仅 ${imgs.loaded}/${imgs.total} 解码`);
+// 轮询直到全部解码或超时（CDN 拉取 200 张图需要一点时间，避免误判）
+let imgs = { total: 0, loaded: 0 };
+for (let i = 0; i < 30; i++) {
+  await p.waitForTimeout(1000);
+  imgs = await p.evaluate(() => ({
+    total: document.querySelectorAll('img').length,
+    loaded: [...document.querySelectorAll('img')].filter((i) => i.naturalWidth > 0).length,
+  }));
+  if (imgs.loaded === imgs.total) break;
+}
+imgs.loaded === imgs.total
+  ? ok(`图片 ${imgs.loaded}/${imgs.total} 全部解码`)
+  : bad(`图片仅 ${imgs.loaded}/${imgs.total} 解码`);
 
 const structure = await p.evaluate(() => ({
   cards: document.querySelectorAll('[data-student-id]').length,

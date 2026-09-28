@@ -5,6 +5,9 @@
 
 纯静态站点，无需后端、无需数据库、无需登录。
 
+**在线地址：<https://r1ce1022.github.io/kivotos-pick-cn/>**
+最爱学生页：<https://r1ce1022.github.io/kivotos-pick-cn/favorite-students/>
+
 选择板（未选择 / 已选择）：
 
 ![选择板空状态](docs/docs-board-empty.png)
@@ -99,17 +102,27 @@ npm run verify           # 截图 + 交互测试 + 导出测试
 `npm run verify` 会用本机 Chrome 跑一遍真实交互，并把截图写到 `scripts/.shots/`。
 它验证：拖拽投放、同一学生换学院时自动从原格移除、标签页下的跨学院搜索、韩文别名搜索、导出图片。
 
+另外两个针对部署场景的验证：
+
+```bash
+# 校验带 basePath 的产物：模拟 Pages 把仓库根目录映射到 /<仓库名>/ 的规则，
+# 逐条检查产物内 228 个引用是否都能命中（本地与子路径两种模式都可用）
+npm run build && node scripts/verify-basepath.mjs /kivotos-pick-cn 4180
+
+# 线上验收：直接请求已部署的站点，检查资源、渲染、交互与导出
+node scripts/verify-live.mjs
+```
+
 ### 其他脚本
 
 | 脚本 | 用途 |
 | --- | --- |
 | `scripts/make-favicon.mjs` | 手写 PNG/ICO 编码生成 `favicon.ico`（无图像库依赖） |
-| `scripts/serve-out.mjs` | 预览 `out/` 的极简静态服务器 |
+| `scripts/serve-out.mjs` | 预览 `out/` 的极简静态服务器（根路径） |
+| `scripts/serve-basepath.mjs` | 模拟子路径部署的预览服务器，如 `/kivotos-pick-cn/` |
+| `scripts/verify-basepath.mjs` | 校验子路径产物里所有引用是否可命中 |
+| `scripts/verify-live.mjs` | 线上验收（资源 + 渲染 + 交互 + 导出） |
 | `scripts/resize-image.mjs` | 缩放/裁剪截图，便于查看超长页面 |
-| `scripts/inspect-schaledb.mjs` | 勘察 SchaleDB 数据结构（一次性） |
-| `scripts/derive-selection.mjs` | 反推原站收录规则（一次性） |
-| `scripts/probe-npc-icons.mjs` | 探测头像可取性（一次性） |
-| `scripts/debug-drag.mjs` | 拖拽行为的定点测试 |
 
 ---
 
@@ -151,11 +164,44 @@ npm run verify           # 截图 + 交互测试 + 导出测试
 
 `npm run build` 产出的 `out/` 是纯静态文件，扔到任何静态托管即可（Nginx、对象存储、Vercel、GitHub Pages…）。
 
-两个注意点：
+### 当前部署（GitHub Pages）
 
-1. **子路径部署**：如果站点不在域名根目录（例如 `https://example.com/ba/`），需要在 `next.config.ts` 里设置 `basePath: '/ba'`，否则资源路径会 404。
-2. **素材已全部本地化**：头像与校徽都在 `public/` 下随产物发布，运行时不依赖 SchaleDB 或原站，国内访问无跨境依赖。
-   `out/` 约 4.5 MB，共 382 个文件。
+已通过 `.github/workflows/deploy.yml` 自动部署：推送到 `main` 即触发构建与发布。
+
+```
+https://r1ce1022.github.io/kivotos-pick-cn/
+```
+
+仓库的 **Settings → Pages → Source** 必须设为 **GitHub Actions**，否则工作流会在
+`actions/configure-pages` 这一步失败。这是新仓库的默认关闭项，需要手动开启一次。
+
+### 子路径部署的注意事项（踩过的坑）
+
+Pages 项目页部署在 `/<仓库名>/` 子路径下，而 Next 只会给它自己生成的 `/_next/...`
+自动加 `basePath`。以下三类路径必须自己处理，否则部署后 404：
+
+| 位置 | 处理方式 |
+| --- | --- |
+| `students.json` 里的 `/assets/...` | `lib/students-data.ts` 按 `NEXT_PUBLIC_PAGES_BASE_PATH` 加前缀 |
+| `public/` 下的 favicon | `app/layout.tsx` 手动加前缀 |
+| 返回首页的原生 `<a href="/">` | 改用 `BASE_PATH` 拼接（`next/link` 会自动处理，原生标签不会） |
+
+构建时通过两个环境变量控制（见工作流）：
+
+- `PAGES_BASE_PATH` → 供 `next.config.ts` 设置 `basePath`（构建期路径重写）
+- `NEXT_PUBLIC_PAGES_BASE_PATH` → 供运行时数据使用
+
+> ⚠️ 必须带 `NEXT_PUBLIC_` 前缀。非该前缀的 `process.env.*` 不会被打包器内联进
+> 客户端代码，会导致「服务端渲染的 HTML 路径正确、客户端水合后变回无前缀」的
+> 不一致：首屏看起来正常，一旦发生状态更新（选人、拖拽、搜索）图片就 404，
+> 导出功能随之卡死。
+
+本地预览不受影响：这两个变量不设置时路径保持根路径，`npm run preview` 照常工作。
+
+### 通用注意点
+
+- **素材已全部本地化**：头像与校徽都在 `public/` 下随产物发布，运行时不依赖 SchaleDB 或原站，国内访问无跨境依赖。`out/` 约 4.5 MB，共 382 个文件。
+- **其它子路径托管**：若换到别的子路径，改工作流里的两个环境变量值即可，源码无需改动。
 
 ---
 
