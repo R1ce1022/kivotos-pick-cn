@@ -320,9 +320,8 @@ export default function FavoriteStudentsPage() {
         </button>
       </header>
 
-      {/* ============ 任务说明 + 进度 ============ */}
+      {/* ============ 说明 + 进度 ============ */}
       <section className={styles.mission}>
-        <div className={styles.missionLabel}>任务 01</div>
         <h1 className={styles.missionTitle}>
           每个学院挑出
           <br />
@@ -451,7 +450,14 @@ export default function FavoriteStudentsPage() {
 
       <footer className={styles.siteFoot}>
         <p>
-          非官方同人作品，与 Nexon /《蔚蓝档案》官方无关。学生资料取自{' '}
+          本页是
+          <a href="https://blue-archive-pick.vercel.app/favorite-students" target="_blank" rel="noreferrer">
+            blue-archive-pick.vercel.app
+          </a>
+          的简体中文复刻（非官方同人作品），与原站及 Nexon /《蔚蓝档案》官方均无关。
+        </p>
+        <p>
+          学生资料取自
           <a href="https://schaledb.com" target="_blank" rel="noreferrer">
             SchaleDB
           </a>

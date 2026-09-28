@@ -61,11 +61,20 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.foot}>
-        非官方同人作品，与 Nexon /《蔚蓝档案》官方无关。学生资料取自{' '}
-        <a href="https://schaledb.com" target="_blank" rel="noreferrer">
-          SchaleDB
-        </a>
-        ，角色版权归 Nexon 所有。
+        <p>
+          本页是
+          <a href="https://blue-archive-pick.vercel.app/favorite-students" target="_blank" rel="noreferrer">
+            blue-archive-pick.vercel.app
+          </a>
+          的简体中文复刻（非官方同人作品），与原站及 Nexon /《蔚蓝档案》官方均无关。
+        </p>
+        <p>
+          学生资料取自
+          <a href="https://schaledb.com" target="_blank" rel="noreferrer">
+            SchaleDB
+          </a>
+          ，角色版权归 Nexon 所有。
+        </p>
       </footer>
     </main>
   );

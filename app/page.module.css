@@ -113,6 +113,12 @@
   color: var(--text-mute);
   border-top: 1px solid var(--border-2);
 }
+.foot p {
+  margin: 0 0 6px;
+}
+.foot p:last-child {
+  margin-bottom: 0;
+}
 .foot a {
   color: var(--accent-deep);
 }

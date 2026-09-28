@@ -107,7 +107,7 @@ export default function CaptureBoard({
         </div>
 
         <div className={styles.exportFooter}>
-          <span>KIVOTOS PICK</span>
+          <span>KIVOTOS PICK · 复刻自 blue-archive-pick.vercel.app</span>
           <span>我的基辅托斯选择表</span>
         </div>
       </div>
