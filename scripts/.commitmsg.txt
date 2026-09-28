@@ -1,9 +1,0 @@
-test: 修正弹窗学生计数被重复计算的问题
-
-选择器 [class*=card] 会同时匹配 .card / .cardImg / .cardInfo —— 三者都含
-card 子串，导致一名学生被数成 3 个：阿拜多斯实际 7 名却被报成 21 名。
-
-上一轮修了 verify-ui 与 verify-mobile，漏了 verify-live；本次补上，
-并把 verify-mobile 里同类用法的统计口径也改为只数屏幕槽位。
-
-应用本身一直正确（DOM 实测 7 张卡），只是测试计数错了。
