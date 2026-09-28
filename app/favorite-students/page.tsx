@@ -172,22 +172,34 @@ export default function FavoriteStudentsPage() {
     if (!node) return;
     setExporting(true);
     showToast('正在生成图片…');
+
+    // html-to-image 会读取克隆节点的 img.src，而克隆节点处于游离文档中，
+    // 解析 /kivotos-pick-cn/assets/... 这类「根相对路径」时会丢掉部署前缀
+    // （GitHub Pages 项目页部署在子路径下，会因此取图 404 而卡死）。
+    // 这里导出前临时换成完全绝对 URL，导出后立即还原。
+    const imgs = Array.from(node.querySelectorAll('img'));
+    const originals = imgs.map((img) => img.getAttribute('src'));
     try {
-      // 等图片加载完，避免导出空白
-      const imgs = Array.from(node.querySelectorAll('img'));
-      await Promise.all(
-        imgs.map((img) =>
-          img.complete
-            ? Promise.resolve()
-            : new Promise<void>((res) => {
-                img.onload = () => res();
-                img.onerror = () => res();
-              })
-        )
-      );
+      for (const img of imgs) {
+        const abs = new URL(img.getAttribute('src') ?? img.src, window.location.href).href;
+        img.setAttribute('src', abs);
+      }
+      if (imgs.length) {
+        await Promise.all(
+          imgs.map((img) =>
+            img.complete
+              ? Promise.resolve()
+              : new Promise<void>((res) => {
+                  img.onload = () => res();
+                  img.onerror = () => res();
+                })
+          )
+        );
+      }
+
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
-        cacheBust: true,
+        cacheBust: false,
         backgroundColor: '#0b1220',
         width: node.offsetWidth,
         height: node.offsetHeight,
@@ -202,6 +214,10 @@ export default function FavoriteStudentsPage() {
     } catch {
       showToast('生成图片失败，请重试');
     } finally {
+      // 无论成功失败都要还原，否则会破坏页面的相对路径与缓存
+      imgs.forEach((img, i) => {
+        if (originals[i] != null) img.setAttribute('src', originals[i] as string);
+      });
       setExporting(false);
     }
   }, [showToast, teacher]);
