@@ -1,11 +1,11 @@
-import type { Academy, Student } from '@/types/students';
+import type { Character, SlotEntry } from '@/types/students';
 import type { Slots } from '@/app/favorite-students/CaptureBoard';
 
 /**
- * 本地存储：让「选择学生的记录」在刷新/重开浏览器后仍然保留。
+ * 本地存储：让「选择角色的记录」在刷新/重开浏览器后仍然保留。
  *
- * 只存引用（学院 id + 学生 id），不存学生对象本身：
- * 学生数据是构建期内联的，一旦重新生成（改名、增删学生）旧记录就会失效，
+ * 只存引用（学院 id + 角色 id + 外观 id），不存角色对象本身：
+ * 角色数据是构建期内联的，一旦重新生成（改名、增删角色）旧记录就会失效，
  * 存引用可以在读取时按当前数据重新解析，避免读到过期数据。
  */
 
@@ -14,7 +14,10 @@ export const STORAGE_KEY = 'kivotos-pick-cn:roster:v1';
 
 export interface StoredSlot {
   academyId: string;
-  studentId: string;
+  /** 所选外观（立绘）的 id */
+  skinId: string;
+  /** 所属角色 id，用于「一人只占一格」的校验 */
+  characterId: string;
 }
 
 export interface StoredRoster {
@@ -28,7 +31,7 @@ export interface RestoredRoster {
   teacher: string;
   slots: Slots;
   savedAt: string;
-  /** 记录里有、但当前学生数据中已不存在的条目数（例如学生被改名/移除） */
+  /** 记录里有、但当前数据中已失效的条目数（角色或外观已不存在） */
   droppedCount: number;
 }
 
@@ -44,47 +47,84 @@ const storage = (): Storage | null => {
 
 export const isStorageAvailable = (): boolean => storage() !== null;
 
+/** 读取时把皮肤解析成槽位内容 */
+const makeEntry = (character: Character) => (skinId: string): SlotEntry | null => {
+  const skin = character.skins.find((k) => k.id === skinId);
+  if (!skin) return null;
+  return {
+    id: skin.id,
+    icon: skin.icon,
+    name: character.name,
+    academyId: character.academyId,
+    characterId: character.id,
+    skins: character.skins,
+  };
+};
+
 /**
  * 把存储里的原始值解析成可用记录。
  * 纯函数：不接触 localStorage，便于单测。
  *
  * 全程防御式解析——存储内容可能被手工改过、被别的版本写过、或已过期。
  * 任何不认识的字段一律忽略，任何无效槽位一律丢弃，绝不因此让页面崩掉。
+ *
+ * 兼容旧版记录：旧格式只有 `studentId`（当时还没有外观功能），
+ * 其值恰好等于基础外观的 id，因此回退按它解析，老用户的选择不会丢。
  */
 export const parseStoredRoster = (
   raw: unknown,
-  academies: Academy[],
-  students: Student[]
+  academies: { id: string }[],
+  characters: Character[]
 ): RestoredRoster | null => {
   if (!raw || typeof raw !== 'object') return null;
-  const data = raw as Partial<StoredRoster>;
+  const data = raw as Partial<StoredRoster> & { slots?: unknown };
   if (data.version !== 1) return null;
   if (!Array.isArray(data.slots)) return null;
 
   const academyIds = new Set(academies.map((a) => a.id));
-  const studentById = new Map(students.map((s) => [s.id, s]));
+  const characterById = new Map(characters.map((c) => [c.id, c]));
 
   const slots: Slots = Object.fromEntries(academies.map((a) => [a.id, null]));
-  const takenStudents = new Set<string>();
+  const takenCharacters = new Set<string>();
   let droppedCount = 0;
 
-  for (const entry of data.slots) {
-    const academyId = typeof entry?.academyId === 'string' ? entry.academyId : '';
-    const studentId = typeof entry?.studentId === 'string' ? entry.studentId : '';
-    const student = studentById.get(studentId);
+  /** 旧版记录只有 studentId（当时还没有外观功能），其值等于基础外观的 id */
+  const legacyId = (entry: Record<string, unknown>) =>
+    typeof entry.studentId === 'string' ? entry.studentId : '';
 
-    // 学院不存在 / 学生已不存在 / 同一学生重复占格 → 丢弃该条
-    if (!academyIds.has(academyId) || !student) {
+  for (const item of data.slots) {
+    const entry = (item ?? {}) as unknown as Record<string, unknown>;
+    const academyId = typeof entry.academyId === 'string' ? entry.academyId : '';
+    const skinId = typeof entry.skinId === 'string' ? entry.skinId : legacyId(entry);
+    const characterId = typeof entry.characterId === 'string' ? entry.characterId : '';
+
+    if (!academyIds.has(academyId) || !skinId) {
       droppedCount++;
       continue;
     }
-    if (takenStudents.has(studentId)) {
+
+    // 优先按记录里的 characterId 定位；旧记录没有该字段时，按皮肤 id 反查角色
+    let character = characterId ? characterById.get(characterId) : undefined;
+    let built = character ? makeEntry(character)(skinId) : null;
+    if (!character || !built) {
+      character = characters.find((c) => c.skins.some((k) => k.id === skinId));
+      built = character ? makeEntry(character)(skinId) : null;
+    }
+
+    // 角色或外观已不存在 / 记录里的角色与外观对不上 → 丢弃该条
+    if (!character || !built) {
       droppedCount++;
       continue;
     }
-    // 学生若已改属别的学院，以当前数据为准，放回它真正的学院
-    slots[student.academyId] = student;
-    takenStudents.add(studentId);
+    // 同一名角色重复占格（旧数据可能因换皮而产生）→ 丢弃后出现的
+    if (takenCharacters.has(character.id)) {
+      droppedCount++;
+      continue;
+    }
+
+    // 角色若已改属别的学院，以当前数据为准，放回它真正的学院
+    slots[character.academyId] = built;
+    takenCharacters.add(character.id);
   }
 
   return {
@@ -96,7 +136,10 @@ export const parseStoredRoster = (
 };
 
 /** 从本地存储读取；无记录或解析失败返回 null */
-export const loadRoster = (academies: Academy[], students: Student[]): RestoredRoster | null => {
+export const loadRoster = (
+  academies: { id: string }[],
+  characters: Character[]
+): RestoredRoster | null => {
   const store = storage();
   if (!store) return null;
   let raw: string | null = null;
@@ -107,7 +150,7 @@ export const loadRoster = (academies: Academy[], students: Student[]): RestoredR
   }
   if (!raw) return null;
   try {
-    return parseStoredRoster(JSON.parse(raw), academies, students);
+    return parseStoredRoster(JSON.parse(raw), academies, characters);
   } catch {
     return null;
   }
@@ -122,7 +165,7 @@ export const saveRoster = (teacher: string, slots: Slots): void => {
     teacher,
     slots: Object.entries(slots)
       .filter(([, s]) => s !== null)
-      .map(([academyId, s]) => ({ academyId, studentId: s!.id })),
+      .map(([academyId, s]) => ({ academyId, skinId: s!.id, characterId: s!.characterId })),
     savedAt: new Date().toISOString(),
   };
   try {

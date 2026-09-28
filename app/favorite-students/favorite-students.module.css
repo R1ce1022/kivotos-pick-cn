@@ -690,9 +690,117 @@
   user-select: none;
   touch-action: manipulation;
 }
+/* 待挑外观：正在展开外观条的那张卡 */
 .cardPending {
   border-color: var(--ok);
   box-shadow: 0 0 0 3px var(--ok-soft);
+}
+/* 已放进格子的角色（含换皮后仍算同一角色） */
+.cardPlaced {
+  border-color: var(--accent-2);
+  background: var(--accent-soft);
+}
+/* 多套外观的数量标记 */
+.cardSkinBadge {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  color: #fff;
+  text-align: center;
+  background: var(--accent-deep);
+  border-radius: 999px;
+}
+
+/* ---------------- 外观条（弹窗内，网格下方） ---------------- */
+.skinBar {
+  padding: 10px 12px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
+}
+.skinBarHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.skinBarHead b {
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+.skinBarHead span {
+  font-size: 0.72rem;
+  color: var(--text-mute);
+}
+.skinList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.skinItem {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  transition: 0.16s;
+}
+.skinItem img {
+  display: block;
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 7px;
+}
+/* 外观名默认隐藏：只在悬停/聚焦/已选中时出现，避免条上堆满文字 */
+.skinLabel {
+  max-width: 58px;
+  overflow: hidden;
+  font-size: 0.6rem;
+  line-height: 1.25;
+  color: var(--text-mute);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.16s;
+}
+.skinItemActive {
+  border-color: var(--accent-deep);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.skinItemActive .skinLabel {
+  color: var(--accent-deep);
+  font-weight: 700;
+  opacity: 1;
+}
+@media (hover: hover) {
+  .skinItem {
+    cursor: pointer;
+  }
+  .skinItem:hover {
+    border-color: var(--accent-2);
+    transform: translateY(-2px);
+  }
+  .skinItem:hover .skinLabel {
+    opacity: 1;
+  }
+}
+/* 触屏没有悬停，文字常显，否则用户看不到外观名 */
+@media (hover: none) {
+  .skinLabel {
+    opacity: 1;
+  }
+}
+.skinItem:focus-visible .skinLabel {
+  opacity: 1;
 }
 
 @media (hover: hover) {

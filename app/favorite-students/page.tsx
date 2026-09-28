@@ -4,18 +4,37 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { studentsData, BASE_PATH } from '@/lib/students-data';
 import { clearRoster, loadRoster, saveRoster } from '@/lib/roster-storage';
-import type { Academy, Student } from '@/types/students';
+import type { Academy, Character, SlotEntry, StudentSkin } from '@/types/students';
 import CaptureBoard, { type Slots } from './CaptureBoard';
 import styles from './favorite-students.module.css';
 
 const { academies, students, stats } = studentsData;
 
-/** 学院 id → 该学院学生（已按 id 排序，保持与原站一致的稳定顺序） */
-const studentsByAcademy = new Map<string, Student[]>();
-for (const a of academies) studentsByAcademy.set(a.id, []);
-for (const s of students) studentsByAcademy.get(s.academyId)?.push(s);
+/** 学院 id → 该学院角色（已按 DefaultOrder 排序，保持与原站一致的稳定顺序） */
+const charactersByAcademy = new Map<string, Character[]>();
+for (const a of academies) charactersByAcademy.set(a.id, []);
+for (const s of students) charactersByAcademy.get(s.academyId)?.push(s);
+
+/** 皮肤 id → { 皮肤, 角色 }，用于把已保存的选择还原成槽位内容 */
+const skinIndex = new Map<string, { skin: StudentSkin; character: Character }>();
+for (const c of students) for (const k of c.skins) skinIndex.set(k.id, { skin: k, character: c });
 
 const emptySlots = (): Slots => Object.fromEntries(academies.map((a) => [a.id, null]));
+
+/**
+ * 把一个角色 + 所选外观摊平成槽位内容。
+ *
+ * 槽位只需要「显示什么 + 属于哪个角色」，因此把皮肤 id 当作槽位条目的 id，
+ * 同时带上 characterId 供去重（一人只占一格）与本地存储校验使用。
+ */
+const toSlotEntry = (character: Character, skin: StudentSkin): SlotEntry => ({
+  id: skin.id,
+  icon: skin.icon,
+  name: character.name,
+  academyId: character.academyId,
+  characterId: character.id,
+  skins: character.skins,
+});
 
 /**
  * 归一化搜索：只支持中文，因此仅消除全/半角括号与星号差异，
@@ -67,6 +86,11 @@ export default function FavoriteStudentsPage() {
   const [teacher, setTeacher] = useState('');
   const [query, setQuery] = useState('');
   const [pickerAcademy, setPickerAcademy] = useState<Academy | null>(null);
+  /**
+   * 已点选、正在挑外观的角色。
+   * 只有多套外观的角色会停留在这里——单套外观的角色点一下直接入格。
+   */
+  const [pendingCharacter, setPendingCharacter] = useState<Character | null>(null);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [saveHint, setSaveHint] = useState<string | null>(null);
@@ -155,19 +179,34 @@ export default function FavoriteStudentsPage() {
   }, [teacher, slots]);
 
   // ---------- 选择逻辑 ----------
-  const assign = useCallback((academyId: string, student: Student) => {
+  const assign = useCallback((academyId: string, entry: SlotEntry) => {
     modified.current = true;
     setSlots((prev) => {
-      // 同一名学生若已在别的学院，先把它从原位置移除（一人只能占一个学院）
+      // 同一名角色若已在别的学院，先把它从原位置移除（一人只能占一个学院）。
+      // 按 characterId 而不是皮肤 id 比较：换皮肤仍算同一名角色。
       const next: Slots = { ...prev };
       for (const key of Object.keys(next)) {
-        if (next[key]?.id === student.id) next[key] = null;
+        if (next[key]?.characterId === entry.characterId) next[key] = null;
       }
-      next[academyId] = student;
+      next[academyId] = entry;
       return next;
     });
     setPickerAcademy(null);
+    setPendingCharacter(null);
   }, []);
+
+  /** 点网格里的角色卡：单套外观直接入格，多套则展开外观条等用户挑 */
+  const onCharacterClick = useCallback(
+    (academy: Academy, character: Character) => {
+      if (character.skins.length <= 1) {
+        assign(academy.id, toSlotEntry(character, character.skins[0]));
+        return;
+      }
+      // 再点一次同一张卡 = 收起外观条
+      setPendingCharacter((prev) => (prev?.id === character.id ? null : character));
+    },
+    [assign]
+  );
 
   const clearSlot = useCallback((academyId: string) => {
     modified.current = true;
@@ -180,6 +219,7 @@ export default function FavoriteStudentsPage() {
     setSlots(emptySlots());
     setTeacher('');
     setQuery('');
+    setPendingCharacter(null);
     showToast('已重置全部选择');
   }, [showToast]);
 
@@ -187,6 +227,13 @@ export default function FavoriteStudentsPage() {
   const openPicker = useCallback((academy: Academy) => {
     setPickerAcademy(academy);
     setQuery('');
+    // 打开别的学院时清掉上一轮待挑外观的角色，避免跨学院残留
+    setPendingCharacter(null);
+  }, []);
+
+  const closePicker = useCallback(() => {
+    setPickerAcademy(null);
+    setPendingCharacter(null);
   }, []);
 
   // ---------- 点学院格 → 打开该学院的选人弹窗 ----------
@@ -198,7 +245,14 @@ export default function FavoriteStudentsPage() {
   useEffect(() => {
     if (!pickerAcademy) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPickerAcademy(null);
+      // 先收起外观条，再关弹窗：符合「一层层退出」的预期
+      if (e.key === 'Escape') {
+        setPendingCharacter((prev) => {
+          if (prev) return null;
+          setPickerAcademy(null);
+          return null;
+        });
+      }
     };
     window.addEventListener('keydown', onKey);
     // 刻意不自动聚焦搜索框：多数情况用不到，自动聚焦会唤起移动端键盘挡住列表
@@ -206,13 +260,16 @@ export default function FavoriteStudentsPage() {
   }, [pickerAcademy]);
 
   // 弹窗列表：只看本学院，搜索也仅在本学院内进行
-  const pickerStudents = useMemo(() => {
+  const pickerCharacters = useMemo(() => {
     if (!pickerAcademy) return [];
-    const all = studentsByAcademy.get(pickerAcademy.id) ?? [];
+    const all = charactersByAcademy.get(pickerAcademy.id) ?? [];
     const q = norm(query);
     if (!q) return all;
     return all.filter((s) => norm(s.name).includes(q));
   }, [pickerAcademy, query]);
+
+  /** 当前格子里已选的外观 id（用于高亮） */
+  const selectedSkinId = pickerAcademy ? (slots[pickerAcademy.id]?.id ?? null) : null;
 
   // ---------- 导出图片 ----------
   /**
@@ -454,9 +511,13 @@ export default function FavoriteStudentsPage() {
               <img src={pickerAcademy.emblem} alt="" />
               <div>
                 <h3>{pickerAcademy.name}</h3>
-                <p>选择一名学生放入此格</p>
+                <p>
+                  {pendingCharacter
+                    ? `选择「${pendingCharacter.name}」要展示的外观`
+                    : '选择一名学生放入此格'}
+                </p>
               </div>
-              <button className={styles.modalClose} onClick={() => setPickerAcademy(null)} aria-label="关闭">
+              <button className={styles.modalClose} onClick={closePicker} aria-label="关闭">
                 ×
               </button>
             </div>
@@ -469,7 +530,11 @@ export default function FavoriteStudentsPage() {
               <input
                 ref={pickerSearchRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  // 换搜索词后网格内容变了，收起外观条避免指向已被筛掉的角色
+                  setPendingCharacter(null);
+                }}
                 placeholder="在本学院内搜索名字"
               />
               {query && (
@@ -480,35 +545,79 @@ export default function FavoriteStudentsPage() {
             </div>
 
             <div className={styles.gridModal}>
-              {pickerStudents.map((s) => (
-                <div
-                  key={s.id}
-                  className={`${styles.card} ${slots[pickerAcademy.id]?.id === s.id ? styles.cardPending : ''}`}
-                  onClick={() => assign(pickerAcademy.id, s)}
-                >
-                  <span className={styles.cardImg}>
-                    <img src={s.icon} alt="" loading="lazy" draggable={false} />
-                  </span>
-                  <span className={styles.cardInfo}>
-                    <b>{s.name}</b>
-                  </span>
-                </div>
-              ))}
+              {pickerCharacters.map((c) => {
+                const isPending = pendingCharacter?.id === c.id;
+                const isPlaced = selectedSkinId !== null && c.skins.some((k) => k.id === selectedSkinId);
+                return (
+                  <div
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isPending}
+                    className={[styles.card, isPending ? styles.cardPending : '', isPlaced ? styles.cardPlaced : '']
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() => onCharacterClick(pickerAcademy, c)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onCharacterClick(pickerAcademy, c);
+                      }
+                    }}
+                  >
+                    <span className={styles.cardImg}>
+                      <img src={c.skins[0].icon} alt="" loading="lazy" draggable={false} />
+                    </span>
+                    <span className={styles.cardInfo}>
+                      <b>{c.name}</b>
+                    </span>
+                    {c.skins.length > 1 && (
+                      <span className={styles.cardSkinBadge} title={`${c.skins.length} 套外观`}>
+                        {c.skins.length}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            {pickerStudents.length === 0 && <p className={styles.empty}>没有匹配的学生</p>}
+            {pendingCharacter && (
+              <div className={styles.skinBar} data-skin-bar={pendingCharacter.id}>
+                <div className={styles.skinBarHead}>
+                  <b>{pendingCharacter.name}</b>
+                  <span>{pendingCharacter.skins.length} 套外观 · 点一下放入此格</span>
+                </div>
+                <div className={styles.skinList}>
+                  {pendingCharacter.skins.map((k, i) => (
+                    <button
+                      key={k.id}
+                      type="button"
+                      className={`${styles.skinItem} ${k.id === selectedSkinId ? styles.skinItemActive : ''}`}
+                      data-skin-id={k.id}
+                      aria-label={`外观 ${i + 1}：${k.name}`}
+                      onClick={() => assign(pickerAcademy.id, toSlotEntry(pendingCharacter, k))}
+                    >
+                      <img src={k.icon} alt="" draggable={false} />
+                      <span className={styles.skinLabel}>{k.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {pickerCharacters.length === 0 && <p className={styles.empty}>没有匹配的学生</p>}
 
             <div className={styles.modalFoot}>
               <button
                 className={styles.ghostBtn}
                 onClick={() => {
                   clearSlot(pickerAcademy.id);
-                  setPickerAcademy(null);
+                  closePicker();
                 }}
               >
                 清空此格
               </button>
-              <button className={styles.primaryBtn} onClick={() => setPickerAcademy(null)}>
+              <button className={styles.primaryBtn} onClick={closePicker}>
                 完成
               </button>
             </div>
@@ -535,7 +644,8 @@ export default function FavoriteStudentsPage() {
           ，头像与角色版权归 Nexon 所有。
         </p>
         <p className={styles.statLine}>
-          收录 {stats.total} 名学生（{stats.base} 名可获取学生 + {stats.npc} 名剧情 NPC）· 数据生成于{' '}
+          收录 {stats.total} 名学生（{stats.base} 名可获取学生 + {stats.npc} 名剧情 NPC），可选{' '}
+          {stats.skinTotal} 套外观 · 数据生成于{' '}
           {new Date(studentsData.generatedAt).toLocaleDateString('zh-CN')}
         </p>
       </footer>

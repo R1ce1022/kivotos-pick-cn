@@ -1,9 +1,9 @@
 'use client';
 
-import type { Academy, Student } from '@/types/students';
+import type { Academy, SlotEntry } from '@/types/students';
 import styles from './favorite-students.module.css';
 
-export type Slots = Record<string, Student | null>;
+export type Slots = Record<string, SlotEntry | null>;
 
 interface Props {
   academies: Academy[];
@@ -48,7 +48,7 @@ export default function CaptureBoard({
   const isLive = variant === 'live';
 
   /** 单个槽位的内部内容 */
-  const renderSlotInner = (a: Academy, picked: Student | null | undefined) =>
+  const renderSlotInner = (a: Academy, picked: SlotEntry | null | undefined) =>
     picked ? (
       <>
         <img className={styles.slotFace} src={picked.icon} alt={isLive ? picked.name : ''} draggable={false} />
@@ -168,7 +168,6 @@ export default function CaptureBoard({
 
       <div className={styles.captureFoot}>
         共 {studentCount} 名学生 · 非官方同人镜像 · 素材版权归 Nexon 所有
-      </div>
-    </div>
+      </div>    </div>
   );
 }

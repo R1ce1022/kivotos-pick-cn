@@ -156,8 +156,31 @@ modalScope.open && modalScope.cards > 0
   ? ok(`弹窗打开并列出 ${modalScope.cards} 名阿拜多斯学生`)
   : bad(`弹窗异常：open=${modalScope.open} cards=${modalScope.cards}`);
 
+// 点多套外观的角色：先展开外观条，再选一套入格
 await p.locator('[role="dialog"] [class*="cardImg"]').first().click();
-await p.waitForTimeout(500);
+await p.waitForTimeout(400);
+{
+  const bar = await p.evaluate(() => {
+    const b = document.querySelector('[data-skin-bar]');
+    return b ? [...b.querySelectorAll('[data-skin-id]')].map((i) => i.getAttribute('data-skin-id')) : null;
+  });
+  bar
+    ? ok(`线上外观条可用，列出 ${bar.length} 套外观`)
+    : bad('线上未出现外观条');
+  if (bar && bar.length > 1) {
+    // 选第二套（非基础外观），顺带验证切换确实生效
+    await p.locator(`[data-skin-id="${bar[1]}"]`).click();
+    await p.waitForTimeout(500);
+    const src = await p.evaluate(
+      () => document.querySelector('[data-live-slot="abydos"] img[class*="slotFace"]')?.getAttribute('src') ?? ''
+    );
+    src.includes(bar[1])
+      ? ok(`所选外观生效（${src.split('/').pop()}）`)
+      : bad(`槽位立绘与所选外观不一致：${src} vs ${bar[1]}`);
+  } else {
+    await p.waitForTimeout(300);
+  }
+}
 const prog = await p.locator('[class*="progress"] b').first().innerText();
 prog === '1' ? ok('点学生后入格，进度 1/15') : bad(`进度异常：${prog}`);
 
@@ -177,7 +200,7 @@ searchHits.length > 0 && searchHits.every((n) => n.includes('白'))
 await p.locator('[role="dialog"] input').fill('시로코');
 await p.waitForTimeout(500);
 const krHits = await p.evaluate(
-  () => document.querySelectorAll('[role="dialog"] [class*="cardImg"]').length
+  () => document.querySelectorAll('[role="dialog"] [class*="cardInfo"] b').length
 );
 krHits === 0 ? ok('韩文搜索无结果（仅支持中文）') : bad(`韩文搜索仍有 ${krHits} 条结果`);
 

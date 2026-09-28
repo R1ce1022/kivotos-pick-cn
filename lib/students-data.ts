@@ -21,5 +21,9 @@ export const studentsData: StudentsData = {
   ...data,
   stats: data.stats,
   academies: data.academies.map((a) => ({ ...a, emblem: withBasePath(a.emblem) })),
-  students: data.students.map((s) => ({ ...s, icon: withBasePath(s.icon) })),
+  students: data.students.map((s) => ({
+    ...s,
+    // 嵌套的皮肤头像也要过前缀——漏掉这一层会在子路径部署下 404
+    skins: s.skins.map((k) => ({ ...k, icon: withBasePath(k.icon) })),
+  })),
 };

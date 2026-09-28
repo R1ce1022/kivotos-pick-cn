@@ -53,22 +53,34 @@ async function exportOnce(browser, { label, contextOptions }) {
     consoleErrors.push(`名字门禁未放行: disabled=${gateOk.disabled} 气泡=${gateOk.hasTip}`);
   }
 
-  // 用弹窗对固定几个学院选人：每个学院都取列表第一张，保证两端一致
+  // 用弹窗对固定几个学院选人：每个学院都取列表第一张卡，
+  // 若该角色有多套外观则明确选「第二套」——这样测的是非基础外观的导出，
+  // 比选基础款更能暴露「两端外观不一致」的问题。两端做法完全一致。
   for (const id of SLOTS) {
     await page.locator(`[data-live-slot="${id}"]`).click();
     await page.waitForTimeout(300);
     await page.locator('[role="dialog"] [class*="cardImg"]').first().click();
     await page.waitForTimeout(300);
+    const bar = page.locator('[data-skin-bar] [data-skin-id]');
+    if (await page.evaluate(() => !!document.querySelector('[data-skin-bar]'))) {
+      const count = await bar.count();
+      // 有第二套就选第二套，否则退回第一套
+      await bar.nth(count > 1 ? 1 : 0).click();
+      await page.waitForTimeout(300);
+    }
   }
   await page.waitForTimeout(400);
 
-  // 记录选中了谁，便于两端核对。
-  // 注意：屏幕槽位里只有头像图，学生名要去离屏导出节点读。
+  // 记录选中了谁 + 用了哪套外观，便于两端核对。
+  // 注意：学生名要去离屏导出节点读（屏幕槽位里只有立绘）；
+  // 立绘取 .exportSlot 内的 img，外层 .exportLogo 里还有一枚校徽。
   const picked = await page.evaluate(() =>
     [...document.querySelectorAll('[data-export-slot]')]
       .map((s) => {
         const name = s.querySelector('[class*="exportStudentName"]')?.textContent?.trim();
-        return name && name !== '未选择' ? `${s.getAttribute('data-export-slot')}=${name}` : null;
+        if (!name || name === '未选择') return null;
+        const src = s.querySelector('[class*="exportSlot"] img')?.getAttribute('src') ?? '';
+        return `${s.getAttribute('data-export-slot')}=${name}:${src.split('/').pop()}`;
       })
       .filter(Boolean)
   );
@@ -107,8 +119,18 @@ await browser.close();
 console.log('\n=== 3. 一致性比对 ===');
 
 if (desktop.picked.join('|') !== mobile.picked.join('|')) {
-  bad(`两端选中的学生不一致：\n      桌面 ${desktop.picked.join(', ')}\n      移动 ${mobile.picked.join(', ')}`);
+  bad(`两端选中的角色/外观不一致：\n      桌面 ${desktop.picked.join(', ')}\n      移动 ${mobile.picked.join(', ')}`);
 } else {
+  // 顺带确认这次测的确实包含非基础外观，否则这条用例的覆盖度是虚的
+  const nonBase = desktop.picked.filter((p) => {
+    const skin = p.split(':')[1] ?? '';
+    return !/^(10005|10000|10003)\.webp$/.test(skin);
+  });
+  if (nonBase.length === 0) {
+    console.log('  ! 本次两端都只选到基础外观，未覆盖换装导出');
+  } else {
+    console.log(`  覆盖了 ${nonBase.length} 个非基础外观：${nonBase.join(', ')}`);
+  }
   ok('两端选中的学生完全一致');
 }
 

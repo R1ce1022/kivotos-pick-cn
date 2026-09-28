@@ -15,13 +15,14 @@ const bad = (m) => {
 
 const browser = await chromium.launch({ channel: 'chrome' });
 
-/** 读取当前已选状态（从槽位里的学生名反推） */
+/** 读取当前已选状态：槽位立绘的文件名，形如 10045 或 npc-arona */
 const readBoard = (page) =>
   page.evaluate(() => {
     const out = {};
     for (const slot of document.querySelectorAll('[data-live-slot]')) {
       const img = slot.querySelector('img[class*="slotFace"]');
-      out[slot.getAttribute('data-live-slot')] = img ? img.getAttribute('alt') || '已选' : null;
+      const src = img?.getAttribute('src') ?? '';
+      out[slot.getAttribute('data-live-slot')] = src ? (src.split('/').pop() ?? '').replace('.webp', '') : null;
     }
     return out;
   });
@@ -49,12 +50,24 @@ const before = await readStore(page);
 before === null ? ok('首次访问时无存储记录') : bad(`首次访问竟已有记录：${JSON.stringify(before)}`);
 
 await page.getByPlaceholder('写下你的名字').fill('持久化测试');
-for (const id of ['abydos', 'gehenna']) {
-  await page.locator(`[data-live-slot="${id}"]`).click();
-  await page.waitForSelector('[role="dialog"]');
-  await page.waitForTimeout(200);
-  await page.locator('[role="dialog"] [class*="cardImg"]').first().click();
-  await page.waitForTimeout(280);
+// 阿拜多斯：选星野的「泳装」外观（非基础款），用来验证保留的是所选外观而不只是角色
+await page.locator('[data-live-slot="abydos"]').click();
+await page.waitForSelector('[role="dialog"]');
+await page.waitForTimeout(250);
+await page.locator('[role="dialog"] [class*="cardInfo"]', { hasText: '星野' }).first().click();
+await page.waitForTimeout(300);
+await page.locator('[data-skin-id="s10045"]').click();
+await page.waitForTimeout(350);
+
+// 格黑娜：随便取第一张卡（若有多套外观则选第一套）
+await page.locator('[data-live-slot="gehenna"]').click();
+await page.waitForSelector('[role="dialog"]');
+await page.waitForTimeout(250);
+await page.locator('[role="dialog"] [class*="cardImg"]').first().click();
+await page.waitForTimeout(300);
+if (await page.evaluate(() => !!document.querySelector('[data-skin-bar]'))) {
+  await page.locator('[data-skin-bar] [data-skin-id]').first().click();
+  await page.waitForTimeout(300);
 }
 
 const stored = await readStore(page);
@@ -64,14 +77,19 @@ if (!stored) {
   stored.slots?.length === 2 ? ok(`存储记录了 ${stored.slots.length} 个学院`) : bad(`存储记录数异常：${stored.slots?.length}`);
   stored.teacher === '持久化测试' ? ok('老师名一并保存') : bad(`老师名未保存：${stored.teacher}`);
   stored.version === 1 ? ok('带版本号') : bad('缺少版本号');
-  // 不应把整个学生对象塞进去
+  const abydos = stored.slots?.find((s) => s.academyId === 'abydos');
+  abydos?.skinId === 's10045' ? ok('存储记录了所选外观（泳装）') : bad(`未记录所选外观：${abydos?.skinId}`);
+  abydos?.characterId === 's10005' ? ok('存储记录了所属角色') : bad(`未记录角色 id：${abydos?.characterId}`);
+  // 不应把整个角色对象塞进去
   const raw = JSON.stringify(stored);
-  raw.includes('icon') ? bad('存储里混入了学生对象（应只存 id）') : ok('只存 id 引用，未存学生对象');
+  raw.includes('icon') ? bad('存储里混入了角色对象（应只存 id）') : ok('只存 id 引用，未存角色对象');
 }
 
 const boardBefore = await readBoard(page);
 const selectedIds = Object.entries(boardBefore).filter(([, v]) => v).map(([k]) => k);
-console.log(`  已选: ${selectedIds.join(', ')}`);
+console.log(`  已选: ${selectedIds.join(', ')}  立绘: ${Object.values(boardBefore).filter(Boolean).join(', ')}`);
+// 记下刷新前的外观，稍后要比对它有没有被退回基础款
+const skinBefore = boardBefore.abydos;
 
 // ---------- 2. 刷新后保留 ----------
 console.log('\n=== 2. 刷新后保留 ===');
@@ -88,6 +106,11 @@ sameSet
 
 const nameAfter = await page.getByPlaceholder('写下你的名字').inputValue();
 nameAfter === '持久化测试' ? ok('老师名也恢复') : bad(`老师名未恢复：${JSON.stringify(nameAfter)}`);
+
+// 关键：保留的必须是所选外观，不能悄悄退回基础款
+boardAfter.abydos === skinBefore
+  ? ok(`所选外观也保留（立绘 ${boardAfter.abydos}）`)
+  : bad(`外观被改动了：刷新前 ${skinBefore}，刷新后 ${boardAfter.abydos}`);
 
 // 恢复应给用户一个提示
 const toastSeen = await page.evaluate(() => document.body.innerText.includes('已恢复'));
@@ -156,6 +179,11 @@ console.log('\n=== 5. 移动端 ===');
   await mp.waitForTimeout(250);
   await mp.locator('[role="dialog"] [class*="cardImg"]').first().click();
   await mp.waitForTimeout(400);
+  // 多套外观的角色会先展开外观条，移动端同样要补一步才入格
+  if (await mp.evaluate(() => !!document.querySelector('[data-skin-bar]'))) {
+    await mp.locator('[data-skin-bar] [data-skin-id]').first().click();
+    await mp.waitForTimeout(400);
+  }
 
   const mStored = await mp.evaluate(() => window.localStorage.getItem('kivotos-pick-cn:roster:v1'));
   mStored ? ok('移动端也写入了存储') : bad('移动端未写入存储');

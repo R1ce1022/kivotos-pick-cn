@@ -101,8 +101,8 @@ console.log('\n=== 2. 移动端弹窗 ===');
     const r = modal.getBoundingClientRect();
     const foot = modal.querySelector('[class*="modalFoot"]');
     const input = modal.querySelector('input');
-    // 用 cardImg 计数，避免外层 .card 与内层 .cardImg/.cardInfo 重复
-    const cards = [...modal.querySelectorAll('[class*="cardImg"]')];
+    // 用 cardInfo b 计数：每张角色卡恰好一个，且不会被外观角标里的元素干扰
+    const cards = [...modal.querySelectorAll('[class*="cardInfo"] b')];
     return {
       left: Math.round(r.left),
       right: Math.round(r.right),
@@ -149,10 +149,44 @@ console.log('\n=== 3. 触屏交互 ===');
   }));
   is(drag.draggable, 0, `可拖拽元素数（共 ${drag.total} 个槽位）`);
 
-  // 点槽位 → 弹窗 → 点学生 → 入格
+  // 点槽位 → 弹窗 → 点学生 → 入格（多套外观的角色会先展开外观条）
   await p.locator('[data-live-slot="abydos"]').click();
   await p.waitForTimeout(500);
   await p.locator('[role="dialog"] [class*="cardImg"]').first().click();
+  await p.waitForTimeout(400);
+
+  // 移动端也要能挑外观：外观条必须落在视口内，且缩略图可点
+  const skinBarFit = await p.evaluate(() => {
+    const bar = document.querySelector('[data-skin-bar]');
+    if (!bar) return null;
+    const r = bar.getBoundingClientRect();
+    const items = [...bar.querySelectorAll('[data-skin-id]')];
+    return {
+      left: Math.round(r.left),
+      right: Math.round(r.right),
+      innerW: window.innerWidth,
+      count: items.length,
+      firstBox: items[0] ? Math.round(items[0].getBoundingClientRect().width) : 0,
+      overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+    };
+  });
+  if (!skinBarFit) {
+    bad('移动端未出现外观条');
+  } else {
+    skinBarFit.left >= 0 && skinBarFit.right <= skinBarFit.innerW
+      ? ok(`外观条在视口内（含 ${skinBarFit.count} 套外观）`)
+      : bad(`外观条溢出：left=${skinBarFit.left} right=${skinBarFit.right} 视口=${skinBarFit.innerW}`);
+    skinBarFit.overflow ? bad('外观条引起横向溢出') : ok('外观条未引起横向溢出');
+    // 触屏没有悬停，外观名应常显
+    const labelVisible = await p.evaluate(() => {
+      const l = document.querySelector('[data-skin-bar] [class*="skinLabel"]');
+      return l ? getComputedStyle(l).opacity === '1' : false;
+    });
+    labelVisible ? ok('触屏下外观名常显') : bad('触屏下外观名不可见');
+  }
+
+  // 选第 2 套外观（星野的泳装）
+  await p.locator('[data-skin-id="s10045"]').click();
   await p.waitForTimeout(500);
 
   const placed = await p.evaluate(() => {

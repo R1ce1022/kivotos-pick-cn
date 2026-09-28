@@ -108,6 +108,9 @@ if (problems.length) {
 console.log('\n=== 抽查关键素材 ===');
 const samples = [
   `${basePath}/assets/students/10000.webp`,
+  // 换装外观：这一层是嵌套在 skins[] 里的，最容易漏加前缀
+  `${basePath}/assets/students/10045.webp`,
+  `${basePath}/assets/students/10098.webp`,
   `${basePath}/assets/students/npc-arona.webp`,
   `${basePath}/assets/schools/abydos.png`,
   `${basePath}/favicon.ico`,
@@ -117,6 +120,71 @@ for (const s of samples) {
   const st = await get(s);
   console.log(`  ${st === 200 ? '✓' : '✗'} ${s} → ${st}`);
   if (st !== 200) failures++;
+}
+
+// ---------- 4. 嵌套的皮肤 icon 在子路径下必须能真正取到 ----------
+// 不能去构建产物里搜 "/assets/students/..." 字面量：raw 数据本来就该是裸路径，
+// 前缀由 lib/students-data.ts 的 withBasePath 在运行时加。
+// 因此这里用浏览器实际打开页面，打开外观条，检查皮肤立绘的 URL 与前缀、并确认能取到。
+console.log('\n=== 嵌套皮肤路径（浏览器实测）===');
+{
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ channel: 'chrome' });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const failed = [];
+  page.on('response', (r) => {
+    const u = r.url();
+    if (u.includes('/assets/') && r.status() >= 400) failed.push(`${r.status()} ${u}`);
+  });
+
+  await page.goto(`http://127.0.0.1:${port}${basePath}/favorite-students/`, {
+    waitUntil: 'networkidle',
+    timeout: 60000,
+  });
+  await page.waitForTimeout(800);
+
+  // 取空槽位里的校徽（.slotEmblem）：它是静态渲染的，用来确认前缀链路本身是通的
+  const slotIcon = await page.evaluate(() => {
+    const img = document.querySelector('[data-live-slot="abydos"] img[class*="slotEmblem"]');
+    return img?.getAttribute('src') ?? '';
+  });
+  slotIcon.startsWith(`${basePath}/assets/`) && !slotIcon.startsWith('/assets/')
+    ? console.log(`  ✓ 槽位校徽带前缀：${slotIcon}`)
+    : (failures++, console.log(`  ✗ 槽位校徽缺少前缀：${slotIcon}`));
+
+  // 打开外观条，取非基础外观（星野的泳装）
+  await page.locator('[data-live-slot="abydos"]').click();
+  await page.waitForSelector('[role="dialog"]');
+  await page.waitForTimeout(300);
+  await page.locator('[role="dialog"] [class*="cardInfo"]', { hasText: '星野' }).first().click();
+  await page.waitForTimeout(350);
+
+  const skinSrcs = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-skin-bar] [data-skin-id] img')].map((i) => i.getAttribute('src') ?? '')
+  );
+  await browser.close();
+
+  if (!skinSrcs.length) {
+    failures++;
+    console.log('  ✗ 未取到外观条的皮肤立绘');
+  } else {
+    const bad = skinSrcs.filter((s) => !s.startsWith(`${basePath}/assets/`));
+    if (bad.length) {
+      failures += bad.length;
+      console.log(`  ✗ ${bad.length} 个皮肤立绘缺少前缀：`);
+      bad.slice(0, 5).forEach((b) => console.log(`      ${b}`));
+    } else {
+      console.log(`  ✓ ${skinSrcs.length} 个皮肤立绘均带前缀（含换装外观）`);
+    }
+  }
+  // 上面用 response 监听确认这些图确实取到了，而不是只看 URL 拼得对不对
+  if (failed.length) {
+    failures += failed.length;
+    console.log(`  ✗ ${failed.length} 个素材请求失败：`);
+    [...new Set(failed)].slice(0, 5).forEach((f) => console.log(`      ${f}`));
+  } else {
+    console.log('  ✓ 页面内的素材请求无 4xx');
+  }
 }
 
 server.close();
