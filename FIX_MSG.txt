@@ -1,0 +1,35 @@
+fix: 修掉页脚日期造成的水合不匹配（React #418）
+
+## 问题
+线上控制台出现 pageerror: Minified React error #418（args[]=text），
+即服务端渲染与客户端首帧的**文本内容**不一致。
+
+根因是页脚这行：
+    new Date(studentsData.generatedAt).toLocaleDateString('zh-CN')
+它在渲染期按**本地时区**换算，而构建机跑在 UTC、用户在中国（UTC+8），
+同一条数据两端算出差一天的日期：
+
+    SSR（构建机 UTC）  → 2026/9/28
+    浏览器（UTC+8）     → 2026/9/29
+
+React 遇到内容不匹配会丢弃 SSR 结果、退回纯客户端渲染，用户侧是首屏闪一下。
+
+## 修法
+把日期在 `npm run build:data` 阶段固化成字符串（`generatedDate`，UTC 取值），
+渲染期只做字符串拼接，两端必然一致。data 与类型同步新增该字段。
+
+为什么不在组件里用 Intl 显式指定 timeZone：那样仍然依赖运行时的 ICU 数据，
+且把「显示哪个日期」的判断散落在渲染路径上。构建期固化更直接，也更容易验证。
+
+## 新增验收
+`npm run verify:hydrate`（scripts/verify-hydration.mjs）：
+用 Asia/Shanghai 时区打开页面，比对 SSR HTML 与客户端首帧的页脚文本，
+并要求控制台无错误。这个问题只在中国时区+UTC 构建的组合下出现，
+本地默认时区测不到，所以脚本里写死时区。
+
+## 顺带修正
+verify-live 的外观断言写错了：皮肤 id 形如 s10045，而文件名是 10045.webp（无 s 前缀），
+拿 id 去比对文件名必然失败。改为剥掉前缀再比对。
+
+全部验收通过：桌面 / 移动端 / 跨设备一致性（0 像素差异）/ 存储单测 /
+存储浏览器 / 水合 / 文档。
