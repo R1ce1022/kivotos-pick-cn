@@ -234,12 +234,35 @@ npm run verify:docs     # README 一致性（见下）
 4. 剩下 144 人，与原站名单的 id **完全一致**；
 5. 原站另有 56 个剧情 NPC（`npc-arona`、`npc-rin`…），SchaleDB 的 students 表**不收录**这些人，头像也不在其 CDN 上，因此中文名写在 `scripts/academies.mjs` 的 `NPC_STUDENTS` 表里。
 
-### 关于 NPC 中文名（需要留意）
+### 关于 NPC 中文名
 
-56 个 NPC 的中文名是**按社区通行译名人工填写的**，不是官方数据源，可能与国服最终译名存在差异。
-如需修正，只改 `scripts/academies.mjs` 里的 `NPC_STUDENTS` 一处，然后重新执行 `npm run build:data && npm run build` 即可。
+这 56 人的名字没有官方数据源（SchaleDB 不收录），因此逐条比对过
+[萌娘百科《蔚蓝档案/译名对照表》](https://mzh.moegirl.org.cn/蔚蓝档案/译名对照表)
+及该站各角色的独立条目页，按**日文名**确认。
 
-举例：`npc-false-president` → 「冒牌学生会长」，`npc-smiling-professor` → 「笑眯眯教授」。
+**两套译名体系，本站选「共识译名」**：该表同时给出「共识译名」（日服/国际服社区通用）
+与「简中服译名」（国服官方），两者常不一致：
+
+| 日服原文 | 共识译名 | 简中服官方 |
+| --- | --- | --- |
+| ゲヘナ学園 | 格黑娜学园 | 歌赫娜学院 |
+| トリニティ総合学園 | 三一综合学园 | 崔尼蒂综合学院 |
+| 由良木 モモカ | 由良木桃香 | 由良木桃可 |
+| 七神 リン | 七神琳 | 七神凛 |
+
+站内的学院名与 144 个可获取学生名都来自 SchaleDB（共识体系），
+所以 NPC 一并对齐共识译名，避免一站之内混用两套体系。
+
+**取「名」不取「全名」**：与可获取学生的短名风格一致（「星野」而非「小鸟游星野」）。
+例如 `npc-karen` 用「可怜」而非「明乐可怜」，`npc-suou` 用「周防」而非「朝雾周防」。
+
+仍有 **3 项无权威来源**，暂按社区通行叫法：
+
+- `npc-false-president` → 「冒牌学生会长」、`npc-gsc-president` → 「学生会长」：属头衔而非人名
+- `npc-rana` → 「拉娜」：萌娘译名表尚未收录该角色
+
+如需修正，只改 `scripts/academies.mjs` 里的 `NPC_STUDENTS` 一处，
+然后重新执行 `npm run build:data && npm run build` 即可。
 
 ### 搜索
 

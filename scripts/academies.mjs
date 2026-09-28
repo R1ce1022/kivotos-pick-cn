@@ -155,42 +155,54 @@ export const STUDENT_ICON_URL = (id) => `https://schaledb.com/images/student/ico
 
 /**
  * 剧情 NPC：SchaleDB 的 students 表里没有这些人，头像也不在 SchaleDB CDN 上，
- * 只能从镜像源取图。中文名为社区通行译名（人工整理）。
+ * 只能从镜像源取图。
+ *
+ * 中文名的依据（2026-09 校对）：
+ *   萌娘百科《蔚蓝档案/译名对照表》 https://mzh.moegirl.org.cn/蔚蓝档案/译名对照表
+ *   及该站各角色独立条目页，按日文名逐一比对。
+ * 采用「共识译名」的名（而非全名），与站内可获取学生的短名风格一致（如「星野」而非「小鸟游星野」）。
+ * 简中服官方译名与共识译名常有出入（如官方「歌赫娜学院」对共识「格黑娜学园」），
+ * 因站内学院名与可获取学生名均取自 SchaleDB 的共识体系，故此处一并对齐共识译名以保持自洽。
+ *
+ * 仍有 3 项无权威来源，暂按社区通行叫法保留：
+ *   npc-false-president（冒牌学生会长）、npc-gsc-president（学生会长）为头衔类；
+ *   npc-rana（拉娜）萌娘译名表尚未收录。
+ *
  * academy 字段对应 ACADEMIES.id
  */
 export const NPC_STUDENTS = [
-  { slug: 'npc-arona', name: '阿罗娜', academyId: 'other' },
+  { slug: 'npc-arona', name: '阿洛娜', academyId: 'other' },
   { slug: 'npc-plana', name: '普拉娜', academyId: 'other' },
   { slug: 'npc-rin', name: '琳', academyId: 'gsc' },
   { slug: 'npc-momoka', name: '桃香', academyId: 'gsc' },
-  { slug: 'npc-aoi', name: '碧', academyId: 'gsc' },
-  { slug: 'npc-ayumu', name: '步', academyId: 'gsc' },
-  { slug: 'npc-haine', name: '妃涅', academyId: 'gsc' },
-  { slug: 'npc-kaya', name: '华耶', academyId: 'gsc' },
-  { slug: 'npc-sumomo', name: '菫', academyId: 'gsc' },
+  { slug: 'npc-aoi', name: '葵', academyId: 'gsc' },
+  { slug: 'npc-ayumu', name: '步梦', academyId: 'gsc' },
+  { slug: 'npc-haine', name: '灰音', academyId: 'gsc' },
+  { slug: 'npc-kaya', name: '花耶', academyId: 'gsc' },
+  { slug: 'npc-sumomo', name: '李', academyId: 'gsc' },
   { slug: 'npc-false-president', name: '冒牌学生会长', academyId: 'gsc' },
   { slug: 'npc-gsc-president', name: '学生会长', academyId: 'gsc' },
-  { slug: 'npc-smiling-professor', name: '笑眯眯教授', academyId: 'other' },
-  { slug: 'npc-ohr', name: '奥尔', academyId: 'other' },
+  { slug: 'npc-smiling-professor', name: '笑面教授', academyId: 'other' },
+  { slug: 'npc-ohr', name: '透', academyId: 'other' },
   { slug: 'npc-sof', name: '索芙', academyId: 'other' },
   { slug: 'npc-sora', name: '空', academyId: 'other' },
   { slug: 'npc-ein', name: '艾因', academyId: 'other' },
-  { slug: 'npc-mai', name: '舞', academyId: 'other' },
+  { slug: 'npc-mai', name: '麻衣', academyId: 'other' },
   { slug: 'npc-malkuth', name: '马尔库特', academyId: 'other' },
-  { slug: 'npc-akemi', name: '朱音', academyId: 'other' },
+  { slug: 'npc-akemi', name: '明美', academyId: 'other' },
   { slug: 'npc-shinon', name: '诗音', academyId: 'other' },
   { slug: 'npc-suiko', name: '翠子', academyId: 'other' },
-  { slug: 'npc-youko', name: '洋子', academyId: 'other' },
-  { slug: 'npc-nagomi', name: '和', academyId: 'other' },
-  { slug: 'npc-ayame', name: '绫女', academyId: 'hyakkiyako' },
-  { slug: 'npc-azami', name: '浅海', academyId: 'hyakkiyako' },
-  { slug: 'npc-kokuriko', name: '心子', academyId: 'hyakkiyako' },
+  { slug: 'npc-youko', name: '阳子', academyId: 'other' },
+  { slug: 'npc-nagomi', name: '和美', academyId: 'other' },
+  { slug: 'npc-ayame', name: '菖蒲', academyId: 'hyakkiyako' },
+  { slug: 'npc-azami', name: '蓟', academyId: 'hyakkiyako' },
+  { slug: 'npc-kokuriko', name: '虞美人', academyId: 'hyakkiyako' },
   { slug: 'npc-kuzunoha', name: '葛叶', academyId: 'hyakkiyako' },
-  { slug: 'npc-shuro', name: '朱鹭', academyId: 'hyakkiyako' },
-  { slug: 'npc-natsuki', name: '夏希', academyId: 'hyakkiyako' },
+  { slug: 'npc-shuro', name: '棕榈', academyId: 'hyakkiyako' },
+  { slug: 'npc-natsuki', name: '夏树', academyId: 'hyakkiyako' },
   { slug: 'npc-arata', name: '新', academyId: 'hyakkiyako' },
   { slug: 'npc-nanami', name: '七海', academyId: 'odyssey' },
-  { slug: 'npc-makina', name: '牧名', academyId: 'odyssey' },
+  { slug: 'npc-makina', name: '真希奈', academyId: 'odyssey' },
   { slug: 'npc-minato', name: '凑', academyId: 'odyssey' },
   { slug: 'npc-mitsuki', name: '美月', academyId: 'odyssey' },
   { slug: 'npc-sanae', name: '早苗', academyId: 'odyssey' },
@@ -199,22 +211,22 @@ export const NPC_STUDENTS = [
   { slug: 'npc-sumika', name: '澄香', academyId: 'odyssey' },
   { slug: 'npc-manami', name: '真奈美', academyId: 'wildhunt' },
   { slug: 'npc-akira', name: '晶', academyId: 'wildhunt' },
-  { slug: 'npc-tsumugi', name: '纺', academyId: 'wildhunt' },
-  { slug: 'npc-hiromi', name: '广美', academyId: 'wildhunt' },
+  { slug: 'npc-tsumugi', name: '纺希', academyId: 'wildhunt' },
+  { slug: 'npc-hiromi', name: '裕美', academyId: 'wildhunt' },
   { slug: 'npc-mayumi', name: '真由美', academyId: 'gehenna' },
   { slug: 'npc-shouko', name: '祥子', academyId: 'gehenna' },
-  { slug: 'npc-karen', name: '花莲', academyId: 'gehenna' },
+  { slug: 'npc-karen', name: '可怜', academyId: 'gehenna' },
   { slug: 'npc-mirai', name: '未来', academyId: 'millennium' },
   { slug: 'npc-tsubasa', name: '翼', academyId: 'millennium' },
-  { slug: 'npc-maia', name: '玛伊亚', academyId: 'arius' },
+  { slug: 'npc-maia', name: '迈亚', academyId: 'arius' },
   { slug: 'npc-misuzu', name: '美铃', academyId: 'valkyrie' },
   { slug: 'npc-yukino', name: '雪乃', academyId: 'srt' },
-  { slug: 'npc-suou', name: '苏芳', academyId: 'highlander' },
+  { slug: 'npc-suou', name: '周防', academyId: 'highlander' },
   { slug: 'npc-rana', name: '拉娜', academyId: 'redwinter' },
   { slug: 'npc-yume', name: '梦', academyId: 'abydos' },
   { slug: 'npc-kaguya', name: '辉夜', academyId: 'shanhaijing' },
   { slug: 'npc-kanae', name: '佳苗', academyId: 'shanhaijing' },
-  { slug: 'npc-kai', name: '凯', academyId: 'shanhaijing' },
+  { slug: 'npc-kai', name: '海', academyId: 'shanhaijing' },
 ];
 
 /**
