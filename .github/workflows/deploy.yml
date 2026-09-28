@@ -29,7 +29,10 @@ jobs:
         run: npm ci
 
       # data/ 与 public/assets/ 已入库，构建不需要再联网抓数据
+      # PAGES_BASE_PATH 让资源路径带上仓库前缀，适配项目页子路径
       - name: 构建静态站点
+        env:
+          PAGES_BASE_PATH: /${{ github.event.repository.name }}
         run: npm run build
 
       - uses: actions/configure-pages@v5

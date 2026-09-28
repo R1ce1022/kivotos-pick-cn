@@ -13,6 +13,7 @@
     "build": "next build",
     "preview": "node scripts/serve-out.mjs 4173",
     "verify": "node scripts/verify-ui.mjs",
+    "verify:pages": "node scripts/verify-basepath.mjs",
     "start": "next start"
   },
   "dependencies": {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
-import { studentsData } from '@/lib/students-data';
+import { studentsData, BASE_PATH } from '@/lib/students-data';
 import type { Academy, Student } from '@/types/students';
 import styles from './favorite-students.module.css';
 
@@ -210,7 +210,7 @@ export default function FavoriteStudentsPage() {
     <main className={styles.page}>
       {/* ============ 顶栏 ============ */}
       <header className={styles.topbar}>
-        <a className={styles.back} href="/">
+        <a className={styles.back} href={`${BASE_PATH}/`}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
           </svg>
