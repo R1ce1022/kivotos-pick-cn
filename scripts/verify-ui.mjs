@@ -105,9 +105,43 @@ if (!emblems.length) {
   ok(`${emblems.length} 个校徽全部可见（最高亮度 ${max}，阈值 200）`);
 }
 
-// ---------- 4. 交互：填老师名字 ----------
-await page.getByPlaceholder('写下你的名字').fill('测试老师');
-console.log('\n✓ 填入老师名字');
+// ---------- 4. 名字门禁：必须填了名字才能导出 ----------
+console.log('\n=== 名字门禁 ===');
+const saveBtn = page.getByRole('button', { name: /保存图片/ });
+const nameInput = page.getByPlaceholder('写下你的名字');
+const gateState = () =>
+  page.evaluate(() => {
+    const btn = document.querySelector('[class*="saveBtn"]');
+    const tip = document.querySelector('[class*="saveTip"]');
+    return {
+      disabled: !!btn?.disabled,
+      hasTip: !!tip,
+      tipText: tip?.textContent?.trim() ?? null,
+      describedBy: btn?.getAttribute('aria-describedby') ?? null,
+    };
+  });
+
+{
+  const s0 = await gateState();
+  s0.disabled && s0.hasTip
+    ? ok(`未填名字时按钮不可用，且气泡提示「${s0.tipText}」`)
+    : bad(`门禁未生效: disabled=${s0.disabled} 气泡=${s0.hasTip}`);
+  s0.describedBy ? ok(`气泡通过 aria-describedby 关联（${s0.describedBy}）`) : bad('缺少 aria-describedby');
+
+  // 纯空格不应放行
+  await nameInput.fill('   ');
+  await page.waitForTimeout(250);
+  const s1 = await gateState();
+  s1.disabled ? ok('纯空格输入仍不可用') : bad('纯空格被当成了有效名字');
+
+  // 正常名字应放行
+  await nameInput.fill('测试老师');
+  await page.waitForTimeout(250);
+  const s2 = await gateState();
+  !s2.disabled && !s2.hasTip
+    ? ok('填入名字后按钮可用，气泡消失')
+    : bad(`填名后仍异常: disabled=${s2.disabled} 气泡=${s2.hasTip}`);
+}
 
 // ---------- 5. 交互：点学院格 → 弹窗只含该学院 → 点学生入格 ----------
 console.log('\n=== 点学院选人 ===');

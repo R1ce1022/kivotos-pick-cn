@@ -152,6 +152,9 @@ npm run preview          # http://127.0.0.1:4173
 | `npm run fetch:assets` | 下载学生头像 / NPC 头像 / 学院校徽到 `public/` |
 | `npm run build:data` | 生成 `data/students.json` |
 
+以上抓取脚本都通过 `scripts/net.mjs` 访问网络——它是共用的网络层（自动探测系统代理、
+带重试与超时），不是独立脚本。
+
 > `.cache/` 与 `.shots/` 已在 `.gitignore` 中，不会入库。
 
 ### 验证
@@ -166,14 +169,34 @@ npm run verify           # 截图 + 交互测试 + 导出测试
 它验证：15 个校徽均可见、点学院格弹出的弹窗只列本学院学生、点击后入格并关闭弹窗、
 弹窗打开时不自动聚焦搜索框、中文搜索生效而韩文搜索无结果、导出图片。
 
-另外三个针对部署与移动端的验证：
+另外四个针对部署、移动端与文档的验证：
 
 ```bash
 npm run verify:mobile   # 320–1024px 无溢出、槽位 1:1、弹窗不裁切、触屏交互、移动端导出
 npm run verify:parity   # 桌面与移动各导出一次并逐像素比对（必须 0 差异）
 npm run verify:pages    # 子路径产物校验，用法：npm run verify:pages /kivotos-pick-cn 4180
-node scripts/verify-live.mjs   # 线上验收：资源 + 渲染 + 交互 + 导出
+npm run verify:live     # 线上验收：资源 + 渲染 + 交互 + 导出
+npm run verify:docs     # README 一致性（见下）
 ```
+
+### 文档校验
+
+`npm run verify:docs` 校验 `README.md` 与仓库实际状态是否一致，用来防住文档漂移：
+
+| 检查 | 内容 |
+| --- | --- |
+| 配图引用 | `![](...)` 指向的本地图片是否存在 |
+| 脚本引用 | 正文提到的 `scripts/*.mjs` 是否存在 |
+| npm 命令 | 提到的 `npm run xxx` 是否已在 `package.json` 定义 |
+| 覆盖度 | `scripts/` 下每个 `.mjs` 是否至少被文档提及 |
+| 章节锚点 | `](#...)` 是否对应到实际标题 |
+| 外链可达 | 文中 http(s) 链接是否返回 < 400 |
+
+参数：`--offline` 跳过外链检查；`--strict-links` 让外链失败也计入失败（默认仅警告，
+因为外链不可控，不应让本仓库的校验随机变红）。
+
+> **配图是否过时无法自动判断**（需要跑浏览器渲染）。改动选择板外观后，
+> 记得重新生成 `docs/*.png`，否则文档会「校验通过但图是旧的」。
 
 ### 其他脚本
 
@@ -182,10 +205,12 @@ node scripts/verify-live.mjs   # 线上验收：资源 + 渲染 + 交互 + 导�
 | `scripts/make-favicon.mjs` | 手写 PNG/ICO 编码生成 `favicon.ico`（无图像库依赖） |
 | `scripts/serve-out.mjs` | 预览 `out/` 的极简静态服务器（根路径） |
 | `scripts/serve-basepath.mjs` | 模拟子路径部署的预览服务器，如 `/kivotos-pick-cn/` |
+| `scripts/verify-ui.mjs` | 桌面端验收（校徽可见性、点学院选人、名字门禁、导出） |
 | `scripts/verify-basepath.mjs` | 校验子路径产物里所有引用是否可命中 |
 | `scripts/verify-mobile.mjs` | 移动端适配验收 |
 | `scripts/verify-export-parity.mjs` | 跨设备导出一致性（像素级） |
 | `scripts/verify-live.mjs` | 线上验收（资源 + 渲染 + 交互 + 导出） |
+| `scripts/verify-readme.mjs` | README 一致性校验 |
 | `scripts/resize-image.mjs` | 缩放/裁剪截图，便于查看超长页面 |
 
 ---

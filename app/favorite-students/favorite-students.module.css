@@ -76,8 +76,14 @@
   letter-spacing: -0.04em;
 }
 
-.saveBtn {
+/* 保存按钮 + 未填名字时的小气泡 */
+.saveWrap {
+  position: relative;
   justify-self: end;
+  display: inline-flex;
+}
+
+.saveBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -98,6 +104,57 @@
 .saveBtn:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+/* 名字没填而禁用时，光标应表达「不可用」而非「进行中」 */
+.saveWrap:not([data-busy]) .saveBtn:disabled {
+  cursor: not-allowed;
+}
+
+/* 小气泡：仅在未填名字时渲染。不拦截指针，避免挡住按钮本身。 */
+.saveTip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  padding: 6px 11px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--text);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s;
+}
+/* 气泡小尖角，指向按钮 */
+.saveTip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+/* 悬停或键盘聚焦时显示 */
+@media (hover: hover) {
+  .saveWrap:hover .saveTip {
+    opacity: 1;
+  }
+}
+.saveBtn:focus-visible ~ .saveTip {
+  opacity: 1;
+}
+/* 触屏无悬停，气泡常显 */
+@media (hover: none) {
+  .saveTip {
+    opacity: 1;
+  }
 }
 
 /* ---------------- 说明与进度 ---------------- */

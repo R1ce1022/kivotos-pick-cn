@@ -17,6 +17,7 @@
     "verify:parity": "node scripts/verify-export-parity.mjs",
     "verify:pages": "node scripts/verify-basepath.mjs",
     "verify:live": "node scripts/verify-live.mjs",
+    "verify:docs": "node scripts/verify-readme.mjs",
     "start": "next start"
   },
   "dependencies": {

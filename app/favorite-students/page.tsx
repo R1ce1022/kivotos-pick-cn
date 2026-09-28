@@ -86,6 +86,9 @@ export default function FavoriteStudentsPage() {
       ? trimmedName
       : `${trimmedName} 老师`;
 
+  /** 必须填了名字才允许导出（纯空白不算） */
+  const hasName = trimmedName.length > 0;
+
   // 卸载时清掉未触发的提示定时器，避免对已卸载组件 setState
   useEffect(
     () => () => {
@@ -310,14 +313,27 @@ export default function FavoriteStudentsPage() {
           <span className={styles.brandMark}>基辅托斯</span>
           <span className={styles.brandText}>选择器</span>
         </div>
-        <button className={styles.saveBtn} onClick={exportImage} disabled={exporting}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          {exporting ? '生成中…' : '保存图片'}
-        </button>
+        {/* 必须填了名字才允许保存；未填时用一个小气泡说明原因 */}
+        <span className={styles.saveWrap} data-busy={exporting ? '' : undefined}>
+          <button
+            className={styles.saveBtn}
+            onClick={exportImage}
+            disabled={exporting || !hasName}
+            aria-describedby={!hasName ? 'save-name-hint' : undefined}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {exporting ? '生成中…' : '保存图片'}
+          </button>
+          {!hasName && (
+            <span id="save-name-hint" role="tooltip" className={styles.saveTip}>
+              先填写老师名字
+            </span>
+          )}
+        </span>
       </header>
 
       {/* ============ 说明 + 进度 ============ */}
@@ -347,7 +363,7 @@ export default function FavoriteStudentsPage() {
             </div>
           </div>
           <div className={styles.missionActions}>
-            <button className={styles.ghostBtn} onClick={resetAll} disabled={selectedCount === 0 && !teacher}>
+            <button className={styles.ghostBtn} onClick={resetAll} disabled={selectedCount === 0 && !trimmedName}>
               重置
             </button>
           </div>

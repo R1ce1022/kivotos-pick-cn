@@ -43,6 +43,15 @@ async function exportOnce(browser, { label, contextOptions }) {
   await page.waitForTimeout(600);
 
   await page.getByPlaceholder('写下你的名字').fill(TEACHER);
+  // 门禁：填了名字按钮才可用；这里顺带确认名字确实生效，否则导出会静默失败
+  await page.waitForTimeout(250);
+  const gateOk = await page.evaluate(() => {
+    const btn = document.querySelector('[class*="saveBtn"]');
+    return { disabled: !!btn?.disabled, hasTip: !!document.querySelector('[class*="saveTip"]') };
+  });
+  if (gateOk.disabled || gateOk.hasTip) {
+    consoleErrors.push(`名字门禁未放行: disabled=${gateOk.disabled} 气泡=${gateOk.hasTip}`);
+  }
 
   // 用弹窗对固定几个学院选人：每个学院都取列表第一张，保证两端一致
   for (const id of SLOTS) {

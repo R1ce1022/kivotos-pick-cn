@@ -129,7 +129,16 @@ invisible.length === 0
   ? ok(`校徽全部可见（${emblemLums.length} 个，最高亮度 ${Math.max(...emblemLums)}）`)
   : bad(`${invisible.length}/${emblemLums.length} 个校徽几乎不可见`);
 
-// 2.2 填老师名字
+// 2.2 名字门禁：未填名字时不允许导出
+const gate = await p.evaluate(() => {
+  const btn = document.querySelector('[class*="saveBtn"]');
+  const tip = document.querySelector('[class*="saveTip"]');
+  return { disabled: !!btn?.disabled, tipText: tip?.textContent?.trim() ?? null };
+});
+gate.disabled
+  ? ok(`线上名字门禁生效（气泡「${gate.tipText}」）`)
+  : bad('线上未填名字时保存按钮竟可用');
+
 await p.getByPlaceholder('写下你的名字').fill('线上验收');
 await p.waitForTimeout(300);
 ok('填入老师名字');

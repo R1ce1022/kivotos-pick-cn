@@ -43,6 +43,8 @@ for (const vp of VIEWPORTS) {
     const board = document.querySelector('[class*="board"]:not([class*="export"])');
     const slot = document.querySelector('[data-live-slot]');
     const cols = (el) => (el ? getComputedStyle(el).gridTemplateColumns.split(' ').length : 0);
+    const saveBtn = document.querySelector('[class*="saveBtn"]');
+    const tip = document.querySelector('[class*="saveTip"]');
     return {
       scrollW: document.documentElement.scrollWidth,
       innerW: window.innerWidth,
@@ -54,6 +56,10 @@ for (const vp of VIEWPORTS) {
       // 旧的学生名单区块不应再存在
       hasRoster: !!document.querySelector('[class*="roster"]'),
       hasTabs: !!document.querySelector('[class*="tabs"]'),
+      // 名字门禁：首屏未填名字，保存按钮应不可用且气泡可访问
+      saveDisabled: !!saveBtn?.disabled,
+      tipVisible: tip ? getComputedStyle(tip).opacity === '1' : false,
+      tipText: tip?.textContent?.trim() ?? null,
     };
   });
 
@@ -61,6 +67,12 @@ for (const vp of VIEWPORTS) {
   m.scrollW <= m.innerW + 1
     ? ok(`${tag} 无横向溢出 (scrollW=${m.scrollW})`)
     : bad(`${tag} 横向溢出: scrollW=${m.scrollW} > ${m.innerW}`);
+
+  m.saveDisabled
+    ? ok(`${tag} 名字门禁生效：保存按钮不可用`)
+    : bad(`${tag} 未填名字时保存按钮竟可用`);
+  // 触屏无悬停，气泡应常显；桌面视口靠 hover，不强求
+  if (vp.w < 768 && !m.tipVisible) bad(`${tag} 触屏下气泡应常显`);
 
   is(m.boardCols, vp.boardCols, `${tag} 选择板列数`);
   Math.abs(m.ratio - 1) <= 0.03
@@ -225,6 +237,14 @@ console.log('\n=== 5. 移动端导出 ===');
   const p = await ctx.newPage();
   await p.goto(`${base}/favorite-students/`, { waitUntil: 'networkidle' });
   await p.waitForTimeout(700);
+
+  // 门禁：不填名字时按钮不可用，点了也不会产生下载
+  const blocked = await p.evaluate(() => !!document.querySelector('[class*="saveBtn"]')?.disabled);
+  blocked ? ok('未填名字时移动端保存按钮不可用') : bad('移动端门禁未生效');
+
+  // 填名字后才放行
+  await p.getByPlaceholder('写下你的名字').fill('移动端验收');
+  await p.waitForTimeout(300);
 
   const dlP = p.waitForEvent('download', { timeout: 90000 }).catch(() => null);
   await p.getByRole('button', { name: /保存图片/ }).click();
