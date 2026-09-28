@@ -19,6 +19,8 @@ export interface Academy {
   short: string;
   /** 校徽路径 */
   emblem: string;
+  /** 强调色：导出图里该学院头像上方的彩色横条，取自原站 */
+  accent: string;
   count: number;
 }
 

@@ -3,6 +3,7 @@
  *
  * schaleCodes: SchaleDB 数据里 School 字段的英文枚举，一个中文学院可对应多个枚举
  * emblem:      校徽图片在 public/ 下的文件名，以及可用下载源（按顺序尝试）
+ * accent:      导出图里该学院头像上方的强调色，取自原站（每个学院一条彩色横条）
  */
 
 export const ACADEMIES = [
@@ -12,6 +13,7 @@ export const ACADEMIES = [
     short: '阿拜多斯',
     schaleCodes: ['Abydos'],
     emblem: 'abydos.png',
+    accent: '#2ba9d9',
   },
   {
     id: 'gehenna',
@@ -19,6 +21,7 @@ export const ACADEMIES = [
     short: '格黑娜',
     schaleCodes: ['Gehenna'],
     emblem: 'gehenna.png',
+    accent: '#d95655',
   },
   {
     id: 'millennium',
@@ -26,6 +29,7 @@ export const ACADEMIES = [
     short: '千年',
     schaleCodes: ['Millennium'],
     emblem: 'millennium.png',
+    accent: '#4d8bdb',
   },
   {
     id: 'trinity',
@@ -33,6 +37,7 @@ export const ACADEMIES = [
     short: '三一',
     schaleCodes: ['Trinity'],
     emblem: 'trinity.png',
+    accent: '#d9a73f',
   },
   {
     id: 'arius',
@@ -40,6 +45,7 @@ export const ACADEMIES = [
     short: '阿里乌斯',
     schaleCodes: ['Arius'],
     emblem: 'arius.png',
+    accent: '#5b6473',
   },
   {
     id: 'hyakkiyako',
@@ -47,6 +53,7 @@ export const ACADEMIES = [
     short: '百鬼夜行',
     schaleCodes: ['Hyakkiyako'],
     emblem: 'hyakkiyako.png',
+    accent: '#d95f92',
   },
   {
     id: 'shanhaijing',
@@ -54,6 +61,7 @@ export const ACADEMIES = [
     short: '山海经',
     schaleCodes: ['Shanhaijing'],
     emblem: 'shanhaijing.png',
+    accent: '#3b9f72',
   },
   {
     id: 'redwinter',
@@ -61,6 +69,7 @@ export const ACADEMIES = [
     short: '红冬',
     schaleCodes: ['RedWinter'],
     emblem: 'redwinter.png',
+    accent: '#be4d67',
   },
   {
     id: 'valkyrie',
@@ -68,6 +77,7 @@ export const ACADEMIES = [
     short: '瓦尔基里',
     schaleCodes: ['Valkyrie'],
     emblem: 'valkyrie.png',
+    accent: '#7789a8',
   },
   {
     id: 'srt',
@@ -75,6 +85,7 @@ export const ACADEMIES = [
     short: 'SRT',
     schaleCodes: ['SRT'],
     emblem: 'srt.png',
+    accent: '#5a84a9',
   },
   {
     id: 'highlander',
@@ -82,6 +93,7 @@ export const ACADEMIES = [
     short: '海兰德',
     schaleCodes: ['Highlander'],
     emblem: 'highlander.png',
+    accent: '#489378',
   },
   {
     id: 'wildhunt',
@@ -89,6 +101,7 @@ export const ACADEMIES = [
     short: '狂猎',
     schaleCodes: ['WildHunt'],
     emblem: 'wildhunt.png',
+    accent: '#845e9f',
   },
   {
     id: 'odyssey',
@@ -96,6 +109,7 @@ export const ACADEMIES = [
     short: '奥德赛',
     schaleCodes: ['Odyssey'],
     emblem: 'odyssey.png',
+    accent: '#4e92b0',
   },
   {
     id: 'other',
@@ -103,6 +117,7 @@ export const ACADEMIES = [
     short: '其他',
     schaleCodes: ['ETC', 'Sakugawa'],
     emblem: 'other.png',
+    accent: '#6983a2',
   },
   {
     id: 'gsc',
@@ -110,6 +125,7 @@ export const ACADEMIES = [
     short: '学生总会',
     schaleCodes: ['GSC'],
     emblem: 'gsc.png',
+    accent: '#4c6781',
   },
 ];
 

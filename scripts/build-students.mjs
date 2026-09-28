@@ -113,6 +113,7 @@ const out = {
     name: a.name,
     short: a.short,
     emblem: `/assets/schools/${a.emblem}`,
+    accent: a.accent,
     count: byAcademy.get(a.id) ?? 0,
   })),
   students,

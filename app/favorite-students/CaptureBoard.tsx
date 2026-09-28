@@ -16,7 +16,7 @@ interface Props {
   studentCount: number;
   /**
    * live   → 屏幕上可见的那份，槽位可点、可拖、可键盘操作
-   * export → 固定 1200px 宽的离屏节点，仅用于截图，不参与任何交互
+   * export → 固定尺寸的离屏节点，仅用于截图，不参与任何交互
    */
   variant: 'live' | 'export';
   // 以下仅在 variant === 'live' 时传入
@@ -30,14 +30,14 @@ interface Props {
 }
 
 /**
- * 导出捕获区。
+ * 选择板。
  *
  * 同一个组件渲染两份：
  *  - 屏幕上一份（variant="live"），跟随设备断点，手机上是 2 列；
- *  - 离屏一份（variant="export"），尺寸被 CSS 锁死为桌面版式。
+ *  - 离屏一份（variant="export"），尺寸被 CSS 锁死，专供截图。
  *
- * 这样同一份选择在手机与电脑上导出的图片完全一致，
- * 而屏幕上的观感仍按设备自适应。
+ * 导出那份的版式对齐原站：顶部标题区 → 5 列网格（校徽 + 头像 + 姓名 + 学院）→ 页脚。
+ * 每个槽位顶部有一条该学院的强调色横条。
  */
 export default function CaptureBoard({
   academies,
@@ -57,8 +57,76 @@ export default function CaptureBoard({
 }: Props) {
   const isLive = variant === 'live';
 
+  /** 单个槽位的内部内容 */
+  const renderSlotInner = (a: Academy, picked: Student | null | undefined) =>
+    picked ? (
+      <>
+        <img className={styles.slotFace} src={picked.icon} alt={isLive ? picked.name : ''} draggable={false} />
+        <i className={styles.slotAccent} style={{ backgroundColor: a.accent }} aria-hidden="true" />
+      </>
+    ) : (
+      <>
+        <img className={styles.slotEmblem} src={a.emblem} alt="" draggable={false} />
+        <span className={styles.slotPlaceholder}>{isLive ? '未选择' : '未选择'}</span>
+        {isLive && <div className={styles.slotAcademy}>{a.short}</div>}
+        <div className={styles.slotPlus}>+</div>
+        <i className={styles.slotAccent} style={{ backgroundColor: a.accent }} aria-hidden="true" />
+      </>
+    );
+
+  // ---------------- 导出模板 ----------------
+  if (!isLive) {
+    return (
+      <div className={`${styles.captureArea} ${styles.captureExport}`}>
+        <div className={styles.exportTitle}>
+          <span>KIVOTOS PICK</span>
+          <h2>
+            {ownerLabel}的
+            <br />
+            学院最爱学生
+          </h2>
+          <p>只属于你的选择存档</p>
+        </div>
+
+        <div className={styles.exportGrid}>
+          {academies.map((a) => {
+            const picked = slots[a.id];
+            return (
+              <div key={a.id} className={styles.exportItem} data-export-slot={a.id}>
+                <div className={styles.exportLogo}>
+                  <img src={a.emblem} alt="" draggable={false} />
+                </div>
+                <div className={styles.exportSlot} data-slot={a.id}>
+                  {picked ? (
+                    <>
+                      <img src={picked.icon} alt="" draggable={false} />
+                      <i className={styles.slotAccent} style={{ backgroundColor: a.accent }} aria-hidden="true" />
+                    </>
+                  ) : (
+                    <>
+                      <span>未选择</span>
+                      <i className={styles.slotAccent} style={{ backgroundColor: a.accent }} aria-hidden="true" />
+                    </>
+                  )}
+                </div>
+                <b className={styles.exportStudentName}>{picked ? picked.name : '未选择'}</b>
+                <small>{a.short}</small>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={styles.exportFooter}>
+          <span>KIVOTOS PICK</span>
+          <span>我的基辅托斯选择表</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------- 屏幕版 ----------------
   return (
-    <div className={isLive ? styles.captureArea : `${styles.captureArea} ${styles.captureExport}`}>
+    <div className={styles.captureArea}>
       <div className={styles.captureHead}>
         <div className={styles.captureTitle}>
           <span className={styles.captureKicker}>KIVOTOS PICK</span>
@@ -72,50 +140,19 @@ export default function CaptureBoard({
         </div>
       </div>
 
-      <div className={isLive ? styles.board : `${styles.board} ${styles.boardExport}`}>
+      <div className={styles.board}>
         {academies.map((a, i) => {
           const picked = slots[a.id];
           const isOver = dragOverAcademy === a.id;
           const slotClass = [
             styles.slot,
-            !isLive ? styles.slotExport : '',
-            picked ? styles.slotFilled : '',
+            picked ? styles.slotFilled : styles.slotEmpty,
             isOver ? styles.slotOver : '',
-            isLive && pendingActive ? styles.slotArmed : '',
+            pendingActive ? styles.slotArmed : '',
           ]
             .filter(Boolean)
             .join(' ');
 
-          const inner = picked ? (
-            <>
-              <img className={styles.slotFace} src={picked.icon} alt={isLive ? picked.name : ''} draggable={false} />
-              <div className={styles.slotName}>{picked.name}</div>
-              <div className={styles.slotAcademy}>{a.short}</div>
-            </>
-          ) : (
-            <>
-              <img className={styles.slotEmblem} src={a.emblem} alt="" draggable={false} />
-              <div className={styles.slotPlaceholder}>未选择</div>
-              <div className={styles.slotAcademy}>{a.short}</div>
-              <div className={styles.slotPlus}>+</div>
-            </>
-          );
-
-          const index = <div className={styles.slotIndex}>{String(i + 1).padStart(2, '0')}</div>;
-
-          // 导出节点用普通 div：不进入 tab 顺序，避免键盘聚焦到屏幕外元素
-          if (!isLive) {
-            return (
-              <div key={a.id} className={styles.slotWrap}>
-                <div className={slotClass} data-slot={a.id} data-export-slot={a.id}>
-                  {index}
-                  {inner}
-                </div>
-              </div>
-            );
-          }
-
-          // 清除按钮与槽位是并列关系而非嵌套——避免「按钮里套按钮」的非法结构
           return (
             <div key={a.id} className={styles.slotWrap}>
               <button
@@ -130,8 +167,8 @@ export default function CaptureBoard({
                 onDragLeave={() => onSlotDragLeave?.(a.id)}
                 onDrop={(e) => onSlotDrop?.(e, a.id)}
               >
-                {index}
-                {inner}
+                <div className={styles.slotIndex}>{String(i + 1).padStart(2, '0')}</div>
+                {renderSlotInner(a, picked)}
               </button>
               {picked && (
                 <button

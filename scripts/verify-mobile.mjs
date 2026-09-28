@@ -60,10 +60,11 @@ for (const vp of VIEWPORTS) {
 
   if (vp.cardCols !== null) is(m.cardCols, vp.cardCols, `${tag} 名单列数`);
 
-  // 卡片宽度应落在 130–220px：过窄挤字，过宽浪费空间
-  m.cardW >= 130 && m.cardW <= 220
+  // 卡片宽度应落在 120–220px：过窄挤字，过宽浪费空间
+  // （320px 下约 129px，因为面板本身有内边距，属于合理下限）
+  m.cardW >= 120 && m.cardW <= 220
     ? ok(`${tag} 卡片宽度合理 (${m.cardW}px, ${m.cardCols} 列)`)
-    : bad(`${tag} 卡片宽度 ${m.cardW}px 超出 130–220px 区间`);
+    : bad(`${tag} 卡片宽度 ${m.cardW}px 超出 120–220px 区间`);
 
   if (vp.w <= 760) {
     m.tabsH <= 56

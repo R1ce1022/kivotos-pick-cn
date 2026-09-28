@@ -286,7 +286,8 @@ export default function FavoriteStudentsPage() {
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
         cacheBust: false,
-        backgroundColor: '#0b1220',
+        // 与原站导出一致：浅色底（节点本身已有背景，这里作为兜底）
+        backgroundColor: '#f7fbfd',
         width: node.offsetWidth,
         height: node.offsetHeight,
       });
@@ -445,9 +446,8 @@ export default function FavoriteStudentsPage() {
         onSlotDragOver={onSlotDragOver}
         onSlotDragLeave={onSlotDragLeave}
       />
-      <p className={styles.exportNote}>导出图片统一按桌面版式生成，手机与电脑出图一致。</p>
 
-      {/* ============ 离屏导出节点（固定 1200px，仅用于截图） ============ */}
+      {/* ============ 离屏导出节点（固定版式，仅用于截图） ============ */}
       <div className={styles.exportStage} data-export-stage aria-hidden="true">
         <div ref={exportRef}>
           <CaptureBoard {...boardProps} variant="export" />

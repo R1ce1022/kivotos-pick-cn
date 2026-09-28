@@ -1,47 +1,59 @@
 :root {
-  /* 基辅托斯青蓝主题 —— 对齐原站观感 */
-  --bg: #0b1220;
-  --bg-soft: #111b2e;
-  --panel: #16233a;
-  --panel-2: #1c2c48;
-  --border: #26385c;
-  --border-strong: #38507e;
-  --text: #eaf1ff;
-  --text-dim: #9db0d0;
-  --text-mute: #6c81a6;
-  --accent: #4fc3f7;
-  --accent-2: #7c9cff;
-  --accent-soft: rgba(79, 195, 247, 0.14);
-  --danger: #ff6b81;
-  --ok: #4ade80;
+  /* ============================================================
+     配色对齐原站 blue-archive-pick.vercel.app（浅色青蓝主题）
+     变量名沿用语义化的 --xxx，方便整体换肤
+     ============================================================ */
 
-  /* 语义化透明度变体：避免样式里散落重复的 rgba 字面量 */
-  --accent-a07: rgba(79, 195, 247, 0.07);
-  --accent-a12: rgba(79, 195, 247, 0.12);
-  --accent-a16: rgba(79, 195, 247, 0.16);
-  --accent-a28: rgba(79, 195, 247, 0.28);
-  --accent-a35: rgba(79, 195, 247, 0.35);
-  --accent-a40: rgba(79, 195, 247, 0.4);
-  --accent-a50: rgba(79, 195, 247, 0.5);
-  --accent-2-a20: rgba(124, 156, 255, 0.2);
-  --ink: 11, 18, 32;
-  --ink-a55: rgba(11, 18, 32, 0.55);
-  --ink-a70: rgba(11, 18, 32, 0.7);
-  --ink-a72: rgba(11, 18, 32, 0.72);
-  --ink-a85: rgba(11, 18, 32, 0.85);
-  --ink-a94: rgba(11, 18, 32, 0.94);
-  --ok-a10: rgba(74, 222, 128, 0.1);
-  --ok-a14: rgba(74, 222, 128, 0.14);
-  --ok-a16: rgba(74, 222, 128, 0.16);
-  --ok-a40: rgba(74, 222, 128, 0.4);
-  --grad-accent: linear-gradient(135deg, var(--accent), var(--accent-2));
-  --grad-panel: linear-gradient(165deg, var(--bg-soft), var(--panel));
-  --on-accent: #04121f;
-  --shadow-pop: 0 14px 34px rgba(0, 0, 0, 0.32);
+  /* 页面背景：淡青渐变 + 右上角光晕 */
+  --bg: #f4f9fc;
+  --bg-grad:
+    linear-gradient(135deg, rgba(28, 174, 228, 0.07), transparent 32%),
+    radial-gradient(circle at 80% 0, rgba(119, 211, 245, 0.22), transparent 28%);
+
+  /* 面板 / 卡片 */
+  --surface: #ffffff;
+  --surface-2: #f2faff;
+  --surface-3: #f7fbfd;
+
+  /* 文字三级 */
+  --text: #17283e;
+  --text-strong: #183248;
+  --text-dim: #536c7e;
+  --text-mute: #8598a6;
+  --text-faint: #91a5b2;
+
+  /* 边框三级 */
+  --border: rgba(42, 111, 147, 0.14);
+  --border-2: #cce0e9;
+  --border-3: #bfd2dc;
+  --border-line: #cfdee5;
+
+  /* 主色（青蓝） */
+  --accent: #1ba9e4;
+  --accent-2: #2ab6e7;
+  --accent-deep: #149ed6;
+  --accent-ink: #199ed5;
+  --accent-soft: rgba(42, 182, 231, 0.12);
+  --accent-soft-2: rgba(42, 182, 231, 0.18);
+  --accent-border: #8dd9f1;
+
+  /* 状态色 */
+  --ok: #3b9f72;
+  --ok-soft: rgba(59, 159, 114, 0.12);
+  --danger: #d95655;
+  --danger-soft: rgba(217, 86, 85, 0.12);
+
+  /* 阴影：原站用带青色调的柔和投影 */
+  --shadow-sm: 0 3px 7px rgba(28, 82, 111, 0.08);
+  --shadow: 0 15px 45px rgba(32, 85, 113, 0.07);
+  --shadow-lg: 0 18px 50px rgba(30, 99, 137, 0.09);
+  /* 原站标志性的「硬阴影」按钮 */
+  --shadow-hard: 4px 4px #9bdff8;
 
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius-pill: 99px;
+
   --font: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system,
     'Segoe UI', sans-serif;
 }
@@ -57,10 +69,9 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(1100px 600px at 12% -10%, rgba(79, 195, 247, 0.16), transparent 60%),
-    radial-gradient(900px 520px at 92% 0%, rgba(124, 156, 255, 0.14), transparent 62%),
-    var(--bg);
+  background-color: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -87,7 +98,7 @@ input {
 
 ::selection {
   background: var(--accent);
-  color: var(--on-accent);
+  color: #fff;
 }
 
 /* 尊重系统的「减少动态效果」设置 */
@@ -111,9 +122,9 @@ input {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: #bfd2dc;
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-2);
+  background: var(--accent);
 }

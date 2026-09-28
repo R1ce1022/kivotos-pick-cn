@@ -53,12 +53,13 @@ async function exportOnce(browser, { label, contextOptions }) {
   }
   await page.waitForTimeout(400);
 
-  // 记录选中了谁，便于两端核对
+  // 记录选中了谁，便于两端核对。
+  // 注意：屏幕槽位里只有头像图，学生名要去离屏导出节点读。
   const picked = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-live-slot]')]
+    [...document.querySelectorAll('[data-export-slot]')]
       .map((s) => {
-        const name = s.querySelector('[class*="slotName"]')?.textContent;
-        return name ? `${s.getAttribute('data-live-slot')}=${name}` : null;
+        const name = s.querySelector('[class*="exportStudentName"]')?.textContent?.trim();
+        return name && name !== '未选择' ? `${s.getAttribute('data-export-slot')}=${name}` : null;
       })
       .filter(Boolean)
   );
