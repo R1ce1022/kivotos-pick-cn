@@ -193,24 +193,32 @@ count === '3' ? ok(`进度显示 ${count}/15`) : bad(`进度异常：${count}（
 // ---------- 5b. 外观（皮肤）切换 ----------
 console.log('\n=== 外观切换 ===');
 {
-  // 阿拜多斯的星野有 4 套外观：点卡片应展开外观条而不是直接入格
+  // 阿拜多斯的星野有 3 套外观：点卡片应展开外观条而不是直接入格
   await page.locator('[data-live-slot="abydos"]').click();
   await page.waitForSelector('[role="dialog"]');
   await page.waitForTimeout(300);
 
   const before = await page.evaluate(() => {
     const dlg = document.querySelector('[role="dialog"]');
+    const names = [...dlg.querySelectorAll('[class*="cardInfo"] b')].map((b) => b.textContent);
     const cards = [...dlg.querySelectorAll('[class*="card"]')].filter((c) =>
       c.querySelector('b')?.textContent === '星野'
     );
     return {
-      cardCount: dlg.querySelectorAll('[class*="cardImg"]').length,
+      names: names.join('、'),
+      cardCount: names.length,
       badge: cards[0]?.querySelector('[class*="cardSkinBadge"]')?.textContent ?? null,
       hasBar: !!document.querySelector('[data-skin-bar]'),
     };
   });
   before.hasBar ? bad('刚打开弹窗就显示了外观条') : ok('刚打开弹窗时没有外观条');
-  eqNum(before.badge, '4', '星野卡片标出 4 套外观');
+  eqNum(before.badge, '3', '星野卡片标出 3 套外观（重复的「武装」已合并）');
+
+  // 白子＊恐怖必须与白子是**两名学生**，不能被当成同一角色的两套外观
+  before.names.includes('白子＊恐怖')
+    ? ok(`「白子＊恐怖」独立成一名学生（阿拜多斯共 ${before.cardCount} 名）`)
+    : bad(`「白子＊恐怖」未独立：${before.names}`);
+  eqNum(before.cardCount, 7, '阿拜多斯角色数（含独立的恐怖白子）');
 
   // 点星野（多套外观）→ 应展开外观条，且弹窗仍未关闭
   await page.locator('[role="dialog"] [class*="cardInfo"]', { hasText: '星野' }).first().click();
@@ -231,7 +239,7 @@ console.log('\n=== 外观切换 ===');
   if (!bar) {
     bad('点多套外观的角色后未出现外观条');
   } else {
-    eqNum(bar.skins.length, 4, '外观条列出 4 套外观');
+    eqNum(bar.skins.length, 3, '外观条列出 3 套外观');
     bar.modalStillOpen ? ok('展开外观条时弹窗保持打开') : bad('展开外观条时弹窗被关掉了');
     bar.skins[0].id === 's10005' ? ok('第一套是基础外观') : bad(`第一套异常：${bar.skins[0].id}`);
 

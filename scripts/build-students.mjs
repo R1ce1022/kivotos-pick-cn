@@ -64,7 +64,11 @@ const stats = {
   noAcademy: 0,
   npc: 0,
   base: 0,
-  /** 只有变体形态、没有基础形态的角色数（例如仅以「白子＊恐怖」收录） */
+  /** 同名形态被丢弃的数量（如星野的重复「武装」） */
+  duplicateFormsDropped: 0,
+  /** ＊形态被拆成独立学生的数量（如「白子＊恐怖」） */
+  terrorSplit: 0,
+  /** 只有变体形态、没有基础形态的角色数（例如仅以「雪玲（泳装）」收录） */
   variantOnlyCharacters: 0,
 };
 
@@ -93,34 +97,70 @@ for (const [, members] of groups) {
   }
 
   const characterName = String(members[0].PersonalName ?? members[0].Name).trim() || String(members[0].Name);
-  const baseMember = members.find((m) => !isVariantName(String(m.Name)));
-  if (!baseMember) stats.variantOnlyCharacters++;
 
-  const skins = members.map((m) => {
-    const skinName = String(m.Name).trim();
-    const isBase = m === baseMember;
-    if (!isBase) stats.variantSkins++;
-    return {
-      id: `s${m.Id}`,
-      // 基础外观直接用角色名，其余保留 SchaleDB 的形态名（如「星野（泳装）」）。
-      // 该名字只用于内部标识与无障碍标签，界面与导出图都不显示。
-      name: isBase ? characterName : skinName,
-      icon: `/assets/students/${m.Id}.webp`,
-      isBase,
-    };
-  });
+  // ---- 规则 A：同名形态只保留一个 ----
+  // 例如星野的「星野（武装）」有两套立绘（10098 / 10099），观感几乎一样，
+  // 放在外观条里纯属噪音。按 DefaultOrder 保留靠前的那套。
+  const bySkinName = new Map();
+  for (const m of members) {
+    const n = String(m.Name).trim();
+    if (!bySkinName.has(n)) bySkinName.set(n, m);
+    else stats.duplicateFormsDropped++;
+  }
+  const kept = [...bySkinName.values()];
 
-  // 组内没有基础形态时，把第一套当作默认外观，保证「默认选中」始终存在
-  if (!baseMember) skins[0].isBase = true;
+  // ---- 规则 B：＊形态（异格）算独立学生，不作为同角色的外观 ----
+  // 例如「白子＊恐怖」与「白子」，立绘与设定都是另一名角色。
+  const terror = kept.filter((m) => String(m.Name).includes('＊'));
+  const normal = kept.filter((m) => !String(m.Name).includes('＊'));
 
-  students.push({
-    id: skins.find((s) => s.isBase).id,
-    name: characterName,
-    academyId,
-    skins,
-    sortKey: members[0].DefaultOrder ?? members[0].Id,
-  });
-  stats.base++;
+  const makeSkins = (list, baseName) => {
+    const base = list.find((m) => !isVariantName(String(m.Name)));
+    if (!base) stats.variantOnlyCharacters++;
+    const skins = list.map((m) => {
+      const isBase = m === base;
+      if (!isBase) stats.variantSkins++;
+      return {
+        id: `s${m.Id}`,
+        // 基础外观直接用角色名，其余保留 SchaleDB 的形态名（如「星野（泳装）」）。
+        // 该名字只用于内部标识与无障碍标签，界面与导出图都不显示。
+        name: isBase ? baseName : String(m.Name).trim(),
+        icon: `/assets/students/${m.Id}.webp`,
+        isBase,
+      };
+    });
+    // 组内没有基础形态时，把第一套当作默认外观，保证「默认选中」始终存在
+    if (!base && skins.length) skins[0].isBase = true;
+    return skins;
+  };
+
+  if (normal.length) {
+    const skins = makeSkins(normal, characterName);
+    students.push({
+      id: skins.find((s) => s.isBase).id,
+      name: characterName,
+      academyId,
+      skins,
+      sortKey: normal[0].DefaultOrder ?? normal[0].Id,
+    });
+    stats.base++;
+  }
+
+  for (const m of terror) {
+    // 异格自成一个学生：名字用完整形态名（如「白子＊恐怖」）以便与本体区分
+    const fullName = String(m.Name).trim();
+    const skins = makeSkins([m], fullName);
+    students.push({
+      id: skins[0].id,
+      name: fullName,
+      academyId,
+      skins,
+      // 排在本体之后，避免打乱既有顺序
+      sortKey: (m.DefaultOrder ?? m.Id) + 500,
+    });
+    stats.base++;
+    stats.terrorSplit++;
+  }
 }
 
 // ---------- 剧情 NPC：每人一套外观 ----------
@@ -175,6 +215,10 @@ const out = {
     /** 来自换装/异格的额外外观数（不含「只有变体形态」角色的首套） */
     variantSkins: stats.variantSkins,
     variantOnlyCharacters: stats.variantOnlyCharacters,
+    /** 同名形态被丢弃的数量（如星野的重复「武装」） */
+    duplicateFormsDropped: stats.duplicateFormsDropped,
+    /** ＊形态被拆成独立学生的数量（如「白子＊恐怖」） */
+    terrorSplit: stats.terrorSplit,
     collabExcluded: stats.collabExcluded,
   },
   academies: ACADEMIES.map((a) => ({
@@ -198,6 +242,12 @@ console.log(`✓ 写出 ${STUDENTS_JSON}`);
 console.log(`  角色总数: ${out.stats.total}（可获取 ${out.stats.base} + NPC ${out.stats.npc}）`);
 console.log(`  可选外观: ${skinTotal}（额外 ${extraSkins} 套；其中换装/异格 ${out.stats.variantSkins} 套）`);
 console.log(`  多外观角色: ${multi.length} 个，单角色最多 ${maxSkins} 套`);
+if (out.stats.duplicateFormsDropped) {
+  console.log(`  同名形态已合并: ${out.stats.duplicateFormsDropped} 套（观感重复，只保留一套）`);
+}
+if (out.stats.terrorSplit) {
+  console.log(`  ＊形态已拆为独立学生: ${out.stats.terrorSplit} 个`);
+}
 if (out.stats.variantOnlyCharacters) {
   console.log(`  仅有变体形态的角色: ${out.stats.variantOnlyCharacters} 个（首套已作为默认外观）`);
 }

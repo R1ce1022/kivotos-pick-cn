@@ -84,6 +84,10 @@ export interface StudentsData {
     variantSkins: number;
     /** 只有变体形态、没有基础形态的角色数（其首套外观即默认） */
     variantOnlyCharacters: number;
+    /** 同名形态被丢弃的数量（如星野的两套「武装」，观感重复只留一套） */
+    duplicateFormsDropped: number;
+    /** ＊形态被拆成独立学生的数量（如「白子＊恐怖」） */
+    terrorSplit: number;
     collabExcluded: number;
   };
   academies: Academy[];
