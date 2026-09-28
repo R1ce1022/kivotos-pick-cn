@@ -150,8 +150,8 @@ await p.waitForTimeout(500);
 const prog = await p.locator('[class*="progress"] b').first().innerText();
 prog === '1' ? ok('点学生后入格，进度 1/15') : bad(`进度异常：${prog}`);
 
-// 2.4 弹窗内中文搜索
-await p.locator('[data-live-slot="millennium"]').click();
+// 2.4 弹窗内中文搜索（用阿拜多斯：白子属于该学院，才能验证「本学院内搜索」）
+await p.locator('[data-live-slot="abydos"]').click();
 await p.waitForTimeout(400);
 await p.locator('[role="dialog"] input').fill('白');
 await p.waitForTimeout(500);
@@ -159,8 +159,17 @@ const searchHits = await p.evaluate(() =>
   [...document.querySelectorAll('[role="dialog"] [class*="cardInfo"] b')].map((b) => b.textContent)
 );
 searchHits.length > 0 && searchHits.every((n) => n.includes('白'))
-  ? ok(`弹窗内搜索「白」命中 ${searchHits.length} 名`)
+  ? ok(`弹窗内搜索「白」命中 ${searchHits.length} 名：${searchHits.join('、')}`)
   : bad(`弹窗搜索异常：${searchHits.join('、') || '(空)'}`);
+
+// 韩文搜索应当无结果（别名索引已移除）
+await p.locator('[role="dialog"] input').fill('시로코');
+await p.waitForTimeout(500);
+const krHits = await p.evaluate(
+  () => document.querySelectorAll('[role="dialog"] [class*="cardImg"]').length
+);
+krHits === 0 ? ok('韩文搜索无结果（仅支持中文）') : bad(`韩文搜索仍有 ${krHits} 条结果`);
+
 await p.keyboard.press('Escape');
 await p.waitForTimeout(300);
 
