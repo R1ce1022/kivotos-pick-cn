@@ -1,29 +1,25 @@
 import raw from '@/data/students.json';
-import type { Academy, Student, StudentsData } from '@/types/students';
+import type { StudentsData } from '@/types/students';
 
 /**
  * GitHub Pages 项目页部署在子路径下（/kivotos-pick-cn/），
- * 此时 public/ 下的素材必须带上前缀，否则会 404。
+ * public/ 下的素材路径必须带前缀，否则会 404。
  *
- * Next 只会给它自己生成的 /_next/... 路径自动加 basePath，
- * 我们写在 students.json 里的 /assets/... 它管不到，所以在这里统一处理。
- * 本地构建时该环境变量为空，路径保持原样。
+ * 两个要点：
+ *  1) 必须用 NEXT_PUBLIC_ 前缀，非该前缀的 process.env.* 不会进入客户端代码；
+ *  2) 转换直接写在数据加载处，不要再经过一层模块导出再解构，
+ *     否则容易在打包后出现「服务端带前缀、客户端水合后变回无前缀」的不一致。
  */
-const BASE_PATH = (process.env.PAGES_BASE_PATH ?? '').replace(/\/$/, '');
+export const BASE_PATH = (process.env.NEXT_PUBLIC_PAGES_BASE_PATH ?? '').replace(/\/$/, '');
 
-const withBasePath = <T extends string>(p: T): string =>
-  BASE_PATH && p.startsWith('/') ? `${BASE_PATH}${p}` : p;
+const withBasePath = (p: string): string => (BASE_PATH && p.startsWith('/') ? `${BASE_PATH}${p}` : p);
 
 const data = raw as unknown as StudentsData;
 
+/** 已按部署前缀处理好的学生数据；页面与导出逻辑都只用这一份 */
 export const studentsData: StudentsData = {
   ...data,
-  academies: data.academies.map(
-    (a): Academy => ({ ...a, emblem: withBasePath(a.emblem) })
-  ),
-  students: data.students.map(
-    (s): Student => ({ ...s, icon: withBasePath(s.icon) })
-  ),
+  stats: data.stats,
+  academies: data.academies.map((a) => ({ ...a, emblem: withBasePath(a.emblem) })),
+  students: data.students.map((s) => ({ ...s, icon: withBasePath(s.icon) })),
 };
-
-export { BASE_PATH };
