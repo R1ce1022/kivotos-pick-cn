@@ -215,6 +215,7 @@ console.log('\n=== 外观切换 ===');
   eqNum(before.badge, '3', '星野卡片标出 3 套外观（重复的「武装」已合并）');
 
   // 白子＊恐怖必须与白子是**两名学生**，不能被当成同一角色的两套外观
+  // （山海经的「雪玲（泳装）」则相反：它是 10143「瞬（泳装）」的重复条目，已丢弃）
   before.names.includes('白子＊恐怖')
     ? ok(`「白子＊恐怖」独立成一名学生（阿拜多斯共 ${before.cardCount} 名）`)
     : bad(`「白子＊恐怖」未独立：${before.names}`);
@@ -291,6 +292,37 @@ console.log('\n=== 外观切换 ===');
   !single.hasBar && single.modalClosed
     ? ok('单套外观的角色一步入格，不出现外观条')
     : bad(`单套外观角色异常：外观条=${single.hasBar} 弹窗关闭=${single.modalClosed}`);
+}
+
+// ---------- 5c. 山海经：10144「雪玲（泳装）」已被并回「瞬」 ===
+console.log('\n=== 重复条目修正 ===');
+{
+  await page.locator('[data-live-slot="shanhaijing"]').click();
+  await page.waitForSelector('[role="dialog"]');
+  await page.waitForTimeout(300);
+
+  const sj = await page.evaluate(() => {
+    const dlg = document.querySelector('[role="dialog"]');
+    return [...dlg.querySelectorAll('[class*="cardInfo"] b')].map((b) => b.textContent);
+  });
+  eqNum(sj.length, 10, '山海经角色数');
+  sj.includes('雪玲')
+    ? bad('「雪玲」仍在列表里（应是 10143「瞬（泳装）」的重复条目）')
+    : ok('已无「雪玲」这个重复条目');
+
+  // 瞬 应含泳装这套外观
+  await page.locator('[role="dialog"] [class*="cardInfo"]', { hasText: '瞬' }).first().click();
+  await page.waitForTimeout(350);
+  const shunSkins = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-skin-bar] [data-skin-id]')].map((i) => i.getAttribute('data-skin-id'))
+  );
+  eqNum(shunSkins.length, 3, '瞬 的外观数');
+  shunSkins.includes('s10143') ? ok('瞬 的外观包含泳装（s10143）') : bad(`缺泳装：${shunSkins.join(',')}`);
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(250);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(250);
 }
 
 // ---------- 6. 弹窗内搜索（仅中文）与不自动聚焦 ----------

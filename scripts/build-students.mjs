@@ -48,6 +48,18 @@ const collabIds = new Set(COLLAB_STUDENTS.map((c) => Number(c.slug)));
 const isVariantName = (name) => /[（(]|\*/.test(name);
 
 /**
+ * 已知的 SchaleDB 重复条目，直接丢弃。
+ *
+ * 10144「雪玲（泳装）」是 10143「瞬（泳装）」的重复项：
+ * 两者同为山海经、ID 与 DefaultOrder（264/265）紧邻、素材几乎相同，
+ * 只是 10144 的 PathName 被误写成 `shunling_swimsuit`
+ * （正确应为 `shun_swimsuit`，且 10143 的名字本来就是对的）。
+ * 若不丢弃，它会因为主干与「瞬」不同而被当成另一名学生，
+ * 使山海经多出 1 人、并出现一个「只有变体形态」的假角色。
+ */
+const DROPPED_DUPLICATE_IDS = new Set([10144]);
+
+/**
  * 聚合键：同一角色的所有外观共享同一个 PathName 主干
  * （shiroko / shiroko_cycling / shiroko_terror → shiroko）。
  *
@@ -66,6 +78,8 @@ const stats = {
   base: 0,
   /** 同名形态被丢弃的数量（如星野的重复「武装」） */
   duplicateFormsDropped: 0,
+  /** 已知的 SchaleDB 重复条目被丢弃的数量（如 10144 冒牌雪玲） */
+  droppedDuplicates: 0,
   /** ＊形态被拆成独立学生的数量（如「白子＊恐怖」） */
   terrorSplit: 0,
   /** 只有变体形态、没有基础形态的角色数（例如仅以「雪玲（泳装）」收录） */
@@ -79,6 +93,10 @@ for (const s of Object.values(cn)) {
   if (!name || name === '0' || /^\d+$/.test(name)) continue;
   if (collabIds.has(s.Id)) {
     stats.collabExcluded++;
+    continue;
+  }
+  if (DROPPED_DUPLICATE_IDS.has(s.Id)) {
+    stats.droppedDuplicates++;
     continue;
   }
   const key = groupKey(s);
@@ -217,6 +235,8 @@ const out = {
     variantOnlyCharacters: stats.variantOnlyCharacters,
     /** 同名形态被丢弃的数量（如星野的重复「武装」） */
     duplicateFormsDropped: stats.duplicateFormsDropped,
+    /** 已知的 SchaleDB 重复条目被丢弃的数量（如 10144 冒牌雪玲） */
+    droppedDuplicates: stats.droppedDuplicates,
     /** ＊形态被拆成独立学生的数量（如「白子＊恐怖」） */
     terrorSplit: stats.terrorSplit,
     collabExcluded: stats.collabExcluded,
@@ -244,6 +264,9 @@ console.log(`  可选外观: ${skinTotal}（额外 ${extraSkins} 套；其中换
 console.log(`  多外观角色: ${multi.length} 个，单角色最多 ${maxSkins} 套`);
 if (out.stats.duplicateFormsDropped) {
   console.log(`  同名形态已合并: ${out.stats.duplicateFormsDropped} 套（观感重复，只保留一套）`);
+}
+if (out.stats.droppedDuplicates) {
+  console.log(`  SchaleDB 重复条目已丢弃: ${out.stats.droppedDuplicates} 个（10144 冒牌雪玲）`);
 }
 if (out.stats.terrorSplit) {
   console.log(`  ＊形态已拆为独立学生: ${out.stats.terrorSplit} 个`);
