@@ -168,13 +168,15 @@ await p.waitForTimeout(400);
     ? ok(`线上外观条可用，列出 ${bar.length} 套外观`)
     : bad('线上未出现外观条');
   if (bar && bar.length > 1) {
-    // 选第二套（非基础外观），顺带验证切换确实生效
+    // 选第二套（非基础外观），顺带验证切换确实生效。
+    // 注意：皮肤 id 形如 s10045，而文件名是 10045.webp（无 s 前缀）。
+    const want = bar[1].replace(/^s/, '');
     await p.locator(`[data-skin-id="${bar[1]}"]`).click();
     await p.waitForTimeout(500);
     const src = await p.evaluate(
       () => document.querySelector('[data-live-slot="abydos"] img[class*="slotFace"]')?.getAttribute('src') ?? ''
     );
-    src.includes(bar[1])
+    src.includes(want)
       ? ok(`所选外观生效（${src.split('/').pop()}）`)
       : bad(`槽位立绘与所选外观不一致：${src} vs ${bar[1]}`);
   } else {

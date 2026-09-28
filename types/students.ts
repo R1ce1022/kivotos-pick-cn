@@ -63,6 +63,8 @@ export interface Academy {
 
 export interface StudentsData {
   generatedAt: string;
+  /** 页脚展示用的日期（构建时已固化，避免渲染期做时区相关格式化） */
+  generatedDate: string;
   source: {
     data: string;
     icons: string;

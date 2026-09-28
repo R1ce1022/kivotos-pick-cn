@@ -645,8 +645,7 @@ export default function FavoriteStudentsPage() {
         </p>
         <p className={styles.statLine}>
           收录 {stats.total} 名学生（{stats.base} 名可获取学生 + {stats.npc} 名剧情 NPC），可选{' '}
-          {stats.skinTotal} 套外观 · 数据生成于{' '}
-          {new Date(studentsData.generatedAt).toLocaleDateString('zh-CN')}
+          {stats.skinTotal} 套外观 · 数据生成于 {studentsData.generatedDate}
         </p>
       </footer>
     </main>

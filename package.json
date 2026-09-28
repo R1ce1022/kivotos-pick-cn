@@ -20,6 +20,7 @@
     "verify:docs": "node scripts/verify-readme.mjs",
     "verify:storage": "node scripts/verify-storage.mjs",
     "verify:persist": "node scripts/verify-persistence.mjs",
+    "verify:hydrate": "node scripts/verify-hydration.mjs",
     "start": "next start"
   },
   "dependencies": {

@@ -120,6 +120,24 @@
 
 「重置」会连带清空本地记录，且重置后不再回写，因此刷新不会把旧记录带回来。
 
+### 水合一致性（踩过的坑）
+
+**渲染期不要做时区相关的日期格式化。** 页脚原本写的是
+`new Date(generatedAt).toLocaleDateString('zh-CN')`，而构建机是 UTC、
+中国用户是 UTC+8，于是同一条数据在两端算出**差一天**的日期：
+
+```
+SSR（构建机 UTC）   → 2026/9/28
+浏览器（UTC+8）      → 2026/9/29   ← 文本不一致，React 报 #418
+```
+
+React 遇到内容不匹配会放弃 SSR 结果、退回纯客户端渲染，用户侧表现为首屏闪一下。
+现在改为在 `npm run build:data` 阶段把日期固化成字符串存进 `generatedDate`，
+渲染期只做字符串拼接，两端必然一致。
+
+`npm run verify:hydrate` 用 `Asia/Shanghai` 时区打开页面，
+比对 SSR HTML 与客户端首帧的页脚文本并检查控制台无错误，防止这个问题复发。
+
 ---
 
 ## 二、技术栈与结构
@@ -205,6 +223,7 @@ npm run verify:pages    # 子路径产物校验，用法：npm run verify:pages 
 npm run verify:live     # 线上验收：资源 + 渲染 + 交互 + 导出
 npm run verify:storage  # 本地存储解析逻辑的单测（纯函数，无需启服务）
 npm run verify:persist  # 本地存储的浏览器验收（选择保留、重置清空、损坏降级）
+npm run verify:hydrate  # 水合一致性：SSR 与客户端首帧的文本必须完全相同
 npm run verify:docs     # README 一致性（见下）
 ```
 
@@ -242,6 +261,7 @@ npm run verify:docs     # README 一致性（见下）
 | `scripts/verify-readme.mjs` | README 一致性校验 |
 | `scripts/verify-storage.mjs` | 本地存储解析逻辑的单测（直接导入 `lib/roster-storage.ts`） |
 | `scripts/verify-persistence.mjs` | 本地存储的浏览器验收 |
+| `scripts/verify-hydration.mjs` | 水合一致性（用中国时区访问，比对 SSR 与客户端文本） |
 | `scripts/resize-image.mjs` | 缩放/裁剪截图，便于查看超长页面 |
 
 ---

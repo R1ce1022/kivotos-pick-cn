@@ -149,6 +149,15 @@ const extraSkins = skinTotal - students.length;
 
 const out = {
   generatedAt: new Date().toISOString(),
+  /**
+   * 页脚显示的日期，构建时固化成字符串。
+   *
+   * 不要在组件里用 new Date(generatedAt).toLocaleDateString()：
+   * 它按**本地时区**换算，而构建机通常在 UTC。中国用户（UTC+8）会看到
+   * 比构建机晚一天的日期，导致服务端渲染与客户端水合的文本不一致
+   * （React 报 #418 并回退为客户端渲染）。这里用 UTC 取值，两端完全相同。
+   */
+  generatedDate: new Date().toISOString().slice(0, 10).replace(/-/g, '/'),
   source: {
     data: 'https://schaledb.com/data/cn/students.min.json',
     icons: 'https://schaledb.com/images/student/icon/{id}.webp',
