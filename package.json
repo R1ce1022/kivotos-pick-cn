@@ -18,6 +18,8 @@
     "verify:pages": "node scripts/verify-basepath.mjs",
     "verify:live": "node scripts/verify-live.mjs",
     "verify:docs": "node scripts/verify-readme.mjs",
+    "verify:storage": "node scripts/verify-storage.mjs",
+    "verify:persist": "node scripts/verify-persistence.mjs",
     "start": "next start"
   },
   "dependencies": {

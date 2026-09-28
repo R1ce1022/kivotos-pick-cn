@@ -29,7 +29,8 @@
 | 弹窗内搜索（仅本学院、仅中文） | ✅ 打开弹窗时不自动聚焦 |
 | 已选学生自动从原学院移出（一人只占一格） | ✅ |
 | 老师名字输入 + 已选进度（0/15） | ✅ |
-| 一键重置 | ✅ |
+| 已选记录本地保存（刷新/重开浏览器后自动恢复） | ✅ 只存 id 引用，数据重新生成后仍可用 |
+| 一键重置（同时清空本地记录） | ✅ |
 | 导出 PNG（含标题、进度、学生头像） | ✅ 2 倍像素密度，**手机与电脑出图完全一致** |
 | 响应式（桌面 / 平板 / 手机） | ✅ 320px 起无横向溢出 |
 | 首页（原站有 `/top-nine`、`/bingo`） | ⚠️ 本期只做 `/favorite-students` |
@@ -93,6 +94,26 @@
    导出节点内必须用固定值。
 3. `1fr` 的解析依赖可用宽度，而桌面有滚动条、手机没有，会差一个滚动条宽度；
    导出节点用 `scrollbar-gutter: stable` 恒定预留，出图因此确定。
+
+### 已选记录的本地保存
+
+选择结果与老师名字存在 `localStorage`，刷新或重开浏览器后自动恢复（代码在 `lib/roster-storage.ts`）。
+
+三个关键决定：
+
+1. **只存 id 引用，不存学生对象**。学生数据是构建期内联的，一旦重新生成
+   （改名、增删学生）旧记录就会失效；存 `{学院 id, 学生 id}` 则可以在读取时
+   按当前数据重新解析。实测存储内容里不含头像路径等冗余字段。
+2. **恢复必须放在 `useEffect` 里**，不能用于 `useState` 初值。首帧若直接渲染存储内容，
+   SSR 的空白选择板与客户端的已选状态不一致，会触发水合报错。
+3. **存储键带版本号**（`kivotos-pick-cn:roster:v1`）。结构不兼容时换 key，
+   旧数据自然失效，因此不需要写迁移逻辑。
+
+读取全程防御式解析：版本不符、JSON 损坏、学院或学生已不存在、同一学生重复占格
+等情况都会被丢弃并降级为空选择板，**不会让页面崩掉**。写入失败（配额满、隐私模式、
+`localStorage` 被策略禁用）静默忽略——存不下不该影响正常使用。
+
+「重置」会连带清空本地记录，且重置后不再回写，因此刷新不会把旧记录带回来。
 
 ---
 
@@ -176,6 +197,8 @@ npm run verify:mobile   # 320–1024px 无溢出、槽位 1:1、弹窗不裁切�
 npm run verify:parity   # 桌面与移动各导出一次并逐像素比对（必须 0 差异）
 npm run verify:pages    # 子路径产物校验，用法：npm run verify:pages /kivotos-pick-cn 4180
 npm run verify:live     # 线上验收：资源 + 渲染 + 交互 + 导出
+npm run verify:storage  # 本地存储解析逻辑的单测（纯函数，无需启服务）
+npm run verify:persist  # 本地存储的浏览器验收（选择保留、重置清空、损坏降级）
 npm run verify:docs     # README 一致性（见下）
 ```
 
@@ -211,6 +234,8 @@ npm run verify:docs     # README 一致性（见下）
 | `scripts/verify-export-parity.mjs` | 跨设备导出一致性（像素级） |
 | `scripts/verify-live.mjs` | 线上验收（资源 + 渲染 + 交互 + 导出） |
 | `scripts/verify-readme.mjs` | README 一致性校验 |
+| `scripts/verify-storage.mjs` | 本地存储解析逻辑的单测（直接导入 `lib/roster-storage.ts`） |
+| `scripts/verify-persistence.mjs` | 本地存储的浏览器验收 |
 | `scripts/resize-image.mjs` | 缩放/裁剪截图，便于查看超长页面 |
 
 ---

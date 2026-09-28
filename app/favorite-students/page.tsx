@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { studentsData, BASE_PATH } from '@/lib/students-data';
+import { clearRoster, loadRoster, saveRoster } from '@/lib/roster-storage';
 import type { Academy, Student } from '@/types/students';
 import CaptureBoard, { type Slots } from './CaptureBoard';
 import styles from './favorite-students.module.css';
@@ -70,9 +71,14 @@ export default function FavoriteStudentsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [saveHint, setSaveHint] = useState<string | null>(null);
 
+  /** 是否已从本地存储恢复过（首帧必须是 false，否则 SSR 与水合不一致） */
+  const [restored, setRestored] = useState(false);
+
   const exportRef = useRef<HTMLDivElement>(null);
   const pickerSearchRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | null>(null);
+  /** 本次会话是否已有真实改动；没有就不要往存储里写，以免无谓擦写 */
+  const modified = useRef(false);
 
   const selectedCount = useMemo(() => Object.values(slots).filter(Boolean).length, [slots]);
   const total = academies.length;
@@ -106,8 +112,51 @@ export default function FavoriteStudentsPage() {
     }, 2200);
   }, []);
 
+  // ---------- 本地存储：恢复上次的选择 ----------
+  // 必须放在 useEffect 里：首帧若直接渲染存储内容，SSR 的空白选择板
+  // 与客户端的已选状态不一致，会触发水合报错。
+  useEffect(() => {
+    const saved = loadRoster(academies, students);
+    if (saved) {
+      setSlots(saved.slots);
+      setTeacher(saved.teacher);
+      const count = Object.values(saved.slots).filter(Boolean).length;
+      // 记录里的学生若已不在当前数据中会被丢弃，此时提示一下避免用户困惑
+      if (count > 0) {
+        showToast(
+          saved.droppedCount > 0
+            ? `已恢复 ${count} 个学院（${saved.droppedCount} 项已失效）`
+            : `已恢复上次的选择（${count} 个学院）`
+        );
+      }
+    }
+    setRestored(true);
+  }, [showToast]);
+
+  // ---------- 本地存储：保存选择 ----------
+  useEffect(() => {
+    if (!restored) return;
+    // 恢复动作本身不应触发写入；只有用户真的改动过才落盘
+    if (!modified.current) return;
+    saveRoster(teacher, slots);
+  }, [restored, teacher, slots]);
+
+  // 关闭/切走页面前补写一次，避免刚选完就关掉时来不及
+  useEffect(() => {
+    const flush = () => {
+      if (modified.current) saveRoster(teacher, slots);
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', flush);
+    };
+  }, [teacher, slots]);
+
   // ---------- 选择逻辑 ----------
   const assign = useCallback((academyId: string, student: Student) => {
+    modified.current = true;
     setSlots((prev) => {
       // 同一名学生若已在别的学院，先把它从原位置移除（一人只能占一个学院）
       const next: Slots = { ...prev };
@@ -121,10 +170,13 @@ export default function FavoriteStudentsPage() {
   }, []);
 
   const clearSlot = useCallback((academyId: string) => {
+    modified.current = true;
     setSlots((prev) => ({ ...prev, [academyId]: null }));
   }, []);
 
   const resetAll = useCallback(() => {
+    modified.current = false;
+    clearRoster();
     setSlots(emptySlots());
     setTeacher('');
     setQuery('');
@@ -350,7 +402,10 @@ export default function FavoriteStudentsPage() {
             <span>老师名字</span>
             <input
               value={teacher}
-              onChange={(e) => setTeacher(e.target.value)}
+              onChange={(e) => {
+                modified.current = true;
+                setTeacher(e.target.value);
+              }}
               placeholder="写下你的名字"
               maxLength={24}
             />
