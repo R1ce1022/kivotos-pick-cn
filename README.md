@@ -1,4 +1,4 @@
-﻿# 基辅托斯选择器（国内镜像复刻版）
+# 基辅托斯选择器（国内镜像复刻版）
 
 [blue-archive-pick.vercel.app/favorite-students](https://blue-archive-pick.vercel.app/favorite-students) 的简体中文复刻：
 从 15 个学院里各挑一名最喜欢的《蔚蓝档案》学生，填满选择板后一键保存成图片。
@@ -350,6 +350,25 @@ npm run verify:docs     # README 一致性（见下）
 
 - `npc-false-president` → 「冒牌学生会长」、`npc-gsc-president` → 「学生会长」：属头衔而非人名
 - `npc-rana` → 「拉娜」：萌娘译名表尚未收录该角色
+
+### NPC 的学院归属（与原站不一致的地方）
+
+这 56 人的学院归属没有权威数据源，本站的分配**大体沿用原站**，
+但有三处**刻意与原站不同**：
+
+| NPC | 原站归属 | 本站 | 说明 |
+| --- | --- | --- | --- |
+| `npc-suiko` 翠子 | 기타（其他） | **山海经** | 按社区认知修正 |
+| `npc-youko` 阳子 | 기타（其他） | **山海经** | 同上 |
+| `npc-nagomi` 和美 | 기타（其他） | **山海经** | 同上 |
+
+原站把 `스이코`/`요코`/`나고미` 三人都放在「其他」，其「山海经」分组恰好 10 人；
+修正后本站山海经为 13 人、「其他」由 18 降为 11 人。
+
+> 原站「其他」分组里还有**一批归属可疑的 NPC**（`npc-akemi` 明美、
+> `npc-shinon` 诗音、`npc-mai` 麻衣、`npc-malkuth` 马尔库特、`npc-sof` 索芙、
+> `npc-ein` 艾因、`npc-ohr` 透、`npc-sora` 空、`npc-arona`/`npc-plana` 等）。
+> 这些**尚未逐一核实**，如需修正只改 `scripts/academies.mjs` 的 `NPC_STUDENTS` 即可。
 
 如需修正，只改 `scripts/academies.mjs` 里的 `NPC_STUDENTS` 一处，
 然后重新执行 `npm run build:data && npm run build` 即可。

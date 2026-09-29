@@ -294,8 +294,8 @@ console.log('\n=== 外观切换 ===');
     : bad(`单套外观角色异常：外观条=${single.hasBar} 弹窗关闭=${single.modalClosed}`);
 }
 
-// ---------- 5c. 山海经：10144「雪玲（泳装）」已被并回「瞬」 ===
-console.log('\n=== 重复条目修正 ===');
+// ---------- 5c. 山海经：重复条目已修正 + 三名 NPC 归属修正 ----------
+console.log('\n=== 重复条目与归属修正 ===');
 {
   await page.locator('[data-live-slot="shanhaijing"]').click();
   await page.waitForSelector('[role="dialog"]');
@@ -305,7 +305,11 @@ console.log('\n=== 重复条目修正 ===');
     const dlg = document.querySelector('[role="dialog"]');
     return [...dlg.querySelectorAll('[class*="cardInfo"] b')].map((b) => b.textContent);
   });
-  eqNum(sj.length, 10, '山海经角色数');
+  eqNum(sj.length, 13, '山海经角色数');
+  // 原站把翠子/阳子/和美归在「其他」，这里按社区认知修正为山海经
+  for (const n of ['翠子', '阳子', '和美']) {
+    sj.includes(n) ? ok(`山海经包含「${n}」`) : bad(`山海经缺少「${n}」`);
+  }
   sj.includes('雪玲')
     ? bad('「雪玲」仍在列表里（应是 10143「瞬（泳装）」的重复条目）')
     : ok('已无「雪玲」这个重复条目');
